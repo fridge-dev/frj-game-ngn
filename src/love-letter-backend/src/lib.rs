@@ -32,6 +32,7 @@ impl LoveLetterInstanceManager {
 
 // ================= Inputs =================
 
+#[derive(Debug)]
 pub enum LoveLetterEvent {
     // Common(?)
     Join(String, ClientOut),
@@ -45,6 +46,7 @@ pub enum LoveLetterEvent {
     PlayCardCommit(String),
 }
 
+#[derive(Debug)]
 pub enum PlayCardSource {
     Hand,
     TopDeck,

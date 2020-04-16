@@ -49,6 +49,7 @@ impl Players {
     }
 }
 
+#[derive(Debug)]
 pub struct ClientOut {
     // TODO
 }

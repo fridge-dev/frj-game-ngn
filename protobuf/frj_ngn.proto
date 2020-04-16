@@ -8,7 +8,8 @@ package proto_frj_ngn;
 // =======================================
 
 service ProtoFridgeGameEngine {
-    rpc HostGame (ProtoHostGameReq) returns (ProtoHostGameReply) {}
+    rpc HostGame (ProtoHostGameReq) returns (stream ProtoPreGameMessage) {}
+    rpc JoinGame (ProtoJoinGameReq) returns (stream ProtoPreGameMessage) {}
 }
 
 // =======================================
@@ -19,14 +20,53 @@ service ProtoFridgeGameEngine {
 // to understand which types are generated.
 
 message ProtoHostGameReq {
+    string player_id = 1;
+    string game_id = 2;
+    ProtoGameType game_type = 3;
+}
+
+message ProtoJoinGameReq {
     string game_id = 1;
     string player_id = 2;
 }
 
-message ProtoHostGameReply {
-    // Nothing
+message ProtoPreGameMessage {
+    oneof inner {
+        ProtoHostGameAck host_game_ack = 1;
+        ProtoJoinGameAck join_game_ack = 2;
+        ProtoPlayerJoinMsg player_join_msg = 3;
+        ProtoGameStartMsg game_start_msg = 4;
+    }
+
+    // Initial response in ProtoPreGameMessage stream for host
+    message ProtoHostGameAck {
+        // Empty
+    }
+
+    // Initial response in ProtoPreGameMessage stream for guest
+    message ProtoJoinGameAck {
+        ProtoGameType game_type = 1;
+        string host_player_id = 2;
+        repeated string other_player_ids = 3;
+    }
+
+    // N intermediate messages received in ProtoPreGameMessage stream for host/guest
+    message ProtoPlayerJoinMsg {
+        string player_id = 1;
+    }
+
+    // Terminal message received in ProtoPreGameMessage stream for host/guest
+    message ProtoGameStartMsg {
+        // Empty
+    }
 }
 
 // =======================================
 // Sub types
 // =======================================
+
+enum ProtoGameType {
+    UNSPECIFIED = 0;
+    LOVE_LETTER = 1;
+    LOST_CITIES = 2;
+}
