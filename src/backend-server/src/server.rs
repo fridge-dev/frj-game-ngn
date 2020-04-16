@@ -1,9 +1,9 @@
 use crate::wire_api::proto_frj_ngn::proto_fridge_game_engine_server::ProtoFridgeGameEngine;
-use crate::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType};
+use crate::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoGetGameStateReq, ProtoGetGameStateReply, ProtoGameDataIn, ProtoGameDataOut};
 use crate::server::hack_type_converters::game_type;
 use std::error::Error;
 use tokio::sync::mpsc;
-use tonic::{Request, Response, Status};
+use tonic::{Request, Response, Status, Streaming};
 use backend_engine::{GameTaskClient, GameEvent};
 use love_letter_backend::LoveLetterEvent;
 use backend_framework::ClientOut;
@@ -27,6 +27,7 @@ impl FrjServer {
 }
 
 type PreGameStream = mpsc::Receiver<Result<ProtoPreGameMessage, Status>>;
+type GameDataStream = mpsc::Receiver<Result<ProtoGameDataOut, Status>>;
 
 #[tonic::async_trait]
 impl ProtoFridgeGameEngine for FrjServer {
@@ -39,7 +40,7 @@ impl ProtoFridgeGameEngine for FrjServer {
         let client_out = make_client_out(tx);
 
         let event = match game_type(req.game_type) {
-            ProtoGameType::Unspecified => unimplemented!(),
+            ProtoGameType::UnspecifiedGameType => unimplemented!(),
             ProtoGameType::LoveLetter => {
                 GameEvent::LoveLetter(LoveLetterEvent::Join(req.player_id, client_out))
             },
@@ -54,6 +55,16 @@ impl ProtoFridgeGameEngine for FrjServer {
     type JoinGameStream = PreGameStream;
 
     async fn join_game(&self, _request: Request<ProtoJoinGameReq>) -> Result<Response<Self::JoinGameStream>, Status> {
+        unimplemented!()
+    }
+
+    async fn get_game_state(&self, _request: Request<ProtoGetGameStateReq>) -> Result<Response<ProtoGetGameStateReply>, Status> {
+        unimplemented!()
+    }
+
+    type OpenGameDataStreamStream = GameDataStream;
+
+    async fn open_game_data_stream(&self, _request: Request<Streaming<ProtoGameDataIn>>) -> Result<Response<Self::OpenGameDataStreamStream>, Status> {
         unimplemented!()
     }
 }

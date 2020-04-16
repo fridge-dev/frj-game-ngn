@@ -17,9 +17,9 @@ pub struct ProtoHostGameReq {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoJoinGameReq {
     #[prost(string, tag = "1")]
-    pub game_id: std::string::String,
-    #[prost(string, tag = "2")]
     pub player_id: std::string::String,
+    #[prost(string, tag = "2")]
+    pub game_id: std::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoPreGameMessage {
@@ -65,6 +65,107 @@ pub mod proto_pre_game_message {
         GameStartMsg(ProtoGameStartMsg),
     }
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoGetGameStateReq {
+    #[prost(string, tag = "1")]
+    pub player_id: std::string::String,
+    #[prost(enumeration = "ProtoGameType", tag = "2")]
+    pub game_type: i32,
+    #[prost(string, tag = "3")]
+    pub game_id: std::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoGetGameStateReply {
+    #[prost(message, optional, tag = "1")]
+    pub game_state: ::std::option::Option<ProtoJnGameState>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoGameDataIn {
+    #[prost(oneof = "proto_game_data_in::Inner", tags = "1, 2")]
+    pub inner: ::std::option::Option<proto_game_data_in::Inner>,
+}
+pub mod proto_game_data_in {
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoGameDataHeader {
+        #[prost(string, tag = "1")]
+        pub player_id: std::string::String,
+        #[prost(string, tag = "2")]
+        pub game_id: std::string::String,
+        #[prost(enumeration = "super::ProtoGameType", tag = "3")]
+        pub game_type: i32,
+    }
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Inner {
+        #[prost(message, tag = "1")]
+        Header(ProtoGameDataHeader),
+        #[prost(message, tag = "2")]
+        Data(super::ProtoJnGameDataIn),
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoGameDataOut {
+    #[prost(oneof = "proto_game_data_out::Inner", tags = "1, 2")]
+    pub inner: ::std::option::Option<proto_game_data_out::Inner>,
+}
+pub mod proto_game_data_out {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Inner {
+        #[prost(message, tag = "1")]
+        GameState(super::ProtoJnGameState),
+        #[prost(message, tag = "2")]
+        Data(super::ProtoJnGameDataOut),
+    }
+}
+// =======================================
+// Jn types
+// =======================================
+
+/// TODO `Any` game-specific payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoJnGameState {}
+/// TODO `Any` game-specific payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoJnGameDataIn {}
+/// TODO `Any` game-specific payload
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoJnGameDataOut {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoStageCardReq {
+    #[prost(string, tag = "1")]
+    pub player_id: std::string::String,
+    #[prost(enumeration = "ProtoPlayCardSource", tag = "2")]
+    pub card_source: i32,
+}
+/// Simple ACK
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoStageCardReply {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoSelectTargetPlayerReq {
+    #[prost(string, tag = "1")]
+    pub player_id: std::string::String,
+    #[prost(string, tag = "2")]
+    pub target_player_id: std::string::String,
+}
+/// Simple ACK
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoSelectTargetPlayerReply {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoSelectTargetCardReq {
+    #[prost(string, tag = "1")]
+    pub player_id: std::string::String,
+    #[prost(enumeration = "ProtoLoveLetterCard", tag = "2")]
+    pub target_card: i32,
+}
+/// Simple ACK
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoSelectTargetCardReply {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoPlayCardCommitReq {
+    #[prost(string, tag = "1")]
+    pub player_id: std::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoPlayCardCommitReply {}
 // =======================================
 // Sub types
 // =======================================
@@ -72,9 +173,33 @@ pub mod proto_pre_game_message {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ProtoGameType {
-    Unspecified = 0,
+    UnspecifiedGameType = 0,
     LoveLetter = 1,
     LostCities = 2,
+}
+// =======================================
+// LoveLetter types
+// =======================================
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ProtoPlayCardSource {
+    UnspecifiedPlayCardSource = 0,
+    Hand = 1,
+    TopDeck = 2,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ProtoLoveLetterCard {
+    UnspecifiedLoveLetterCard = 0,
+    Guard = 1,
+    Priest = 2,
+    Baron = 3,
+    Handmaid = 4,
+    Prince = 5,
+    King = 6,
+    Countess = 7,
+    Princess = 8,
 }
 #[doc = r" Generated server implementations."]
 pub mod proto_fridge_game_engine_server {
@@ -101,6 +226,19 @@ pub mod proto_fridge_game_engine_server {
             &self,
             request: tonic::Request<super::ProtoJoinGameReq>,
         ) -> Result<tonic::Response<Self::JoinGameStream>, tonic::Status>;
+        async fn get_game_state(
+            &self,
+            request: tonic::Request<super::ProtoGetGameStateReq>,
+        ) -> Result<tonic::Response<super::ProtoGetGameStateReply>, tonic::Status>;
+        #[doc = "Server streaming response type for the OpenGameDataStream method."]
+        type OpenGameDataStreamStream: Stream<Item = Result<super::ProtoGameDataOut, tonic::Status>>
+            + Send
+            + Sync
+            + 'static;
+        async fn open_game_data_stream(
+            &self,
+            request: tonic::Request<tonic::Streaming<super::ProtoGameDataIn>>,
+        ) -> Result<tonic::Response<Self::OpenGameDataStreamStream>, tonic::Status>;
     }
     #[derive(Debug)]
     #[doc(hidden)]
@@ -198,6 +336,74 @@ pub mod proto_fridge_game_engine_server {
                             tonic::server::Grpc::new(codec)
                         };
                         let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/proto_frj_ngn.ProtoFridgeGameEngine/GetGameState" => {
+                    struct GetGameStateSvc<T: ProtoFridgeGameEngine>(pub Arc<T>);
+                    impl<T: ProtoFridgeGameEngine>
+                        tonic::server::UnaryService<super::ProtoGetGameStateReq>
+                        for GetGameStateSvc<T>
+                    {
+                        type Response = super::ProtoGetGameStateReply;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ProtoGetGameStateReq>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { inner.get_game_state(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let interceptor = inner.1.clone();
+                        let inner = inner.0;
+                        let method = GetGameStateSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = if let Some(interceptor) = interceptor {
+                            tonic::server::Grpc::with_interceptor(codec, interceptor)
+                        } else {
+                            tonic::server::Grpc::new(codec)
+                        };
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/proto_frj_ngn.ProtoFridgeGameEngine/OpenGameDataStream" => {
+                    struct OpenGameDataStreamSvc<T: ProtoFridgeGameEngine>(pub Arc<T>);
+                    impl<T: ProtoFridgeGameEngine>
+                        tonic::server::StreamingService<super::ProtoGameDataIn>
+                        for OpenGameDataStreamSvc<T>
+                    {
+                        type Response = super::ProtoGameDataOut;
+                        type ResponseStream = T::OpenGameDataStreamStream;
+                        type Future =
+                            BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<tonic::Streaming<super::ProtoGameDataIn>>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { inner.open_game_data_stream(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let interceptor = inner.1;
+                        let inner = inner.0;
+                        let method = OpenGameDataStreamSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = if let Some(interceptor) = interceptor {
+                            tonic::server::Grpc::with_interceptor(codec, interceptor)
+                        } else {
+                            tonic::server::Grpc::new(codec)
+                        };
+                        let res = grpc.streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
