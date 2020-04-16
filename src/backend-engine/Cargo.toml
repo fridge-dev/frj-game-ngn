@@ -1,0 +1,17 @@
+[package]
+name = "backend-engine"
+version = "0.1.0"
+authors = ["Alec Von Arx <al.vonarx@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# 1p
+backend-framework = { path = "../backend-framework" }
+love-letter-backend = { path = "../love-letter-backend" }
+
+# 3p
+async-trait = "0.1.24"
+chrono = "0.4"
+num_cpus = "1.12.0"
+rand = "=0.7.3"
+tokio = { version = "0.2", features = ["full"] }
