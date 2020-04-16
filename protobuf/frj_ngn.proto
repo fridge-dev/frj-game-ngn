@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+// src/backend-server/src/wire_api/ depends on this. Change it carefully.
+package proto_frj_ngn;
+
+// =======================================
+// Service
+// =======================================
+
+service ProtoFridgeGameEngine {
+    rpc HostGame (ProtoHostGameReq) returns (ProtoHostGameReply) {}
+}
+
+// =======================================
+// API Request and Reply messages
+// =======================================
+
+// Convention: ALL messages should have prefix "Proto" so in the rust src, it's easy
+// to understand which types are generated.
+
+message ProtoHostGameReq {
+    string game_id = 1;
+    string player_id = 2;
+}
+
+message ProtoHostGameReply {
+    // Nothing
+}
+
+// =======================================
+// Sub types
+// =======================================
