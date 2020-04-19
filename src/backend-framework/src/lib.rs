@@ -5,9 +5,15 @@ pub mod shuffler;
 use crate::wire_api::proto_frj_ngn::ProtoPreGameMessage;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use tonic::Code;
 
 pub struct Players {
     out_by_player_id: HashMap<String, Box<dyn ClientOut + Send>>,
+    // TODO lifetimes learning opportunity:
+    //      use reference here, because the string is always a key in the map.
+    // TODO If Playsers was only instantiated at the time when a new player joins,
+    //      then we could avoid Option.
+    party_leader_player_id: Option<String>,
 }
 
 impl Players {
@@ -15,10 +21,14 @@ impl Players {
     pub fn new() -> Self {
         Players {
             out_by_player_id: HashMap::new(),
+            party_leader_player_id: None
         }
     }
 
     pub fn add(&mut self, player_id: String, client_out: Box<dyn ClientOut + Send>) {
+        if self.party_leader_player_id.is_none() {
+            self.party_leader_player_id = Some(player_id.clone());
+        }
         self.out_by_player_id.insert(player_id, client_out);
     }
 
@@ -35,6 +45,20 @@ impl Players {
             .keys()
             .map(|k| k.to_owned())
             .collect()
+    }
+
+    pub fn party_leader(&self) -> &Option<String> {
+        &self.party_leader_player_id
+    }
+
+    pub fn party_leader_and_all_player_ids(&self) -> (Option<usize>, Vec<String>) {
+        let player_ids = self.player_ids();
+        let index_of_party_leader = match &self.party_leader_player_id {
+            None => None,
+            Some(party_leader) => player_ids.iter().position(|pid| pid == party_leader),
+        };
+
+        (index_of_party_leader, player_ids)
     }
 
     fn out_stream<F: FnOnce(&Box<dyn ClientOut + Send>) -> ()>(&self, player_id: &String, send_func: F) {
@@ -73,6 +97,15 @@ pub trait ClientOut: Debug {
 pub enum MessageErrType {
     ServerFault,
     InvalidReq,
+}
+
+impl From<MessageErrType> for Code {
+    fn from(err_type: MessageErrType) -> Self {
+        match err_type {
+            MessageErrType::ServerFault => Code::Internal,
+            MessageErrType::InvalidReq => Code::InvalidArgument,
+        }
+    }
 }
 
 /// A simplified interface for an Option where you expect to

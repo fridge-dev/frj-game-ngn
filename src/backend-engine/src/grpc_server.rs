@@ -5,6 +5,7 @@ use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server:
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoGetGameStateReq, ProtoGetGameStateReply, ProtoGameDataIn, ProtoGameDataOut};
 use backend_framework::{ClientOut, MessageErrType};
 use love_letter_backend::LoveLetterEvent;
+use std::convert::TryFrom;
 use std::error::Error;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming, Code};
@@ -40,10 +41,10 @@ impl ProtoFridgeGameEngine for FrjServer {
         let (tx, rx) = mpsc::unbounded_channel();
         let client_out = make_client_out(tx);
 
-        let event = match hack_type_converters::game_type(req.game_type) {
+        let event = match ProtoGameType::try_from(req.game_type)? {
             ProtoGameType::UnspecifiedGameType => unimplemented!(),
             ProtoGameType::LoveLetter => {
-                GameEvent::LoveLetter(LoveLetterEvent::Join(req.player_id, client_out))
+                GameEvent::LoveLetter(LoveLetterEvent::JoinGame(req.player_id, client_out))
             },
             ProtoGameType::LostCities => unimplemented!(),
         };
@@ -55,8 +56,23 @@ impl ProtoFridgeGameEngine for FrjServer {
 
     type JoinGameStream = PreGameStream;
 
-    async fn join_game(&self, _request: Request<ProtoJoinGameReq>) -> Result<Response<Self::JoinGameStream>, Status> {
-        unimplemented!()
+    async fn join_game(&self, request: Request<ProtoJoinGameReq>) -> Result<Response<Self::JoinGameStream>, Status> {
+        let req = request.into_inner();
+
+        let (tx, rx) = mpsc::unbounded_channel();
+        let client_out = make_client_out(tx);
+
+        let event = match ProtoGameType::try_from(req.game_type)? {
+            ProtoGameType::UnspecifiedGameType => unimplemented!(),
+            ProtoGameType::LoveLetter => {
+                GameEvent::LoveLetter(LoveLetterEvent::JoinGame(req.player_id, client_out))
+            },
+            ProtoGameType::LostCities => unimplemented!(),
+        };
+
+        self.games.send(req.game_id, event);
+
+        Ok(Response::new(rx))
     }
 
     async fn get_game_state(&self, _request: Request<ProtoGetGameStateReq>) -> Result<Response<ProtoGetGameStateReply>, Status> {
@@ -76,6 +92,7 @@ fn make_client_out(tx: mpsc::UnboundedSender<Result<ProtoPreGameMessage, Status>
     })
 }
 
+// TODO remove this trait if it turns out it's unnecessary.
 #[derive(Debug)]
 struct StreamClientOut {
     sender: mpsc::UnboundedSender<Result<ProtoPreGameMessage, Status>>,
@@ -90,27 +107,11 @@ impl ClientOut for StreamClientOut {
     }
 
     fn send_error_message(&self, message: String, err_type: MessageErrType) {
-        if let Err(msg) = self.sender.send(Err(Status::new(convert_err(err_type), message))) {
+        let status = Status::new(Code::from(err_type), message);
+
+        if let Err(msg) = self.sender.send(Err(status)) {
             println!("WARN: Client stream dropped. We failed to send message: {:?}", msg);
         }
     }
 }
 
-fn convert_err(err_type: MessageErrType) -> Code {
-    match err_type {
-        MessageErrType::ServerFault => Code::Internal,
-        MessageErrType::InvalidReq => Code::InvalidArgument,
-    }
-}
-
-mod hack_type_converters {
-    use backend_framework::wire_api::proto_frj_ngn::ProtoGameType;
-
-    pub fn game_type(proto_type: i32) -> ProtoGameType {
-        match proto_type {
-            1 => ProtoGameType::LoveLetter,
-            2 => ProtoGameType::LostCities,
-            _ => unimplemented!()
-        }
-    }
-}

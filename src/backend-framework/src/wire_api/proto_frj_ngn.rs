@@ -20,19 +20,17 @@ pub struct ProtoJoinGameReq {
     pub player_id: std::string::String,
     #[prost(string, tag = "2")]
     pub game_id: std::string::String,
+    #[prost(enumeration = "ProtoGameType", tag = "3")]
+    pub game_type: i32,
 }
+/// Stream message type
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoPreGameMessage {
-    #[prost(oneof = "proto_pre_game_message::Inner", tags = "1, 2, 3, 4")]
+    #[prost(oneof = "proto_pre_game_message::Inner", tags = "1, 2, 3")]
     pub inner: ::std::option::Option<proto_pre_game_message::Inner>,
 }
 pub mod proto_pre_game_message {
-    /// Initial response in ProtoPreGameMessage stream for host
-    ///
-    /// Empty
-    #[derive(Clone, PartialEq, ::prost::Message)]
-    pub struct ProtoHostGameAck {}
-    /// Initial response in ProtoPreGameMessage stream for guest
+    /// Initial response in PreGame stream
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct ProtoJoinGameAck {
         #[prost(enumeration = "super::ProtoGameType", tag = "1")]
@@ -42,13 +40,13 @@ pub mod proto_pre_game_message {
         #[prost(string, repeated, tag = "3")]
         pub other_player_ids: ::std::vec::Vec<std::string::String>,
     }
-    /// N intermediate messages received in ProtoPreGameMessage stream for host/guest
+    /// N intermediate messages received in PreGame stream
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct ProtoPlayerJoinMsg {
         #[prost(string, tag = "1")]
         pub player_id: std::string::String,
     }
-    /// Terminal message received in ProtoPreGameMessage stream for host/guest
+    /// Terminal message received in PreGame stream
     ///
     /// Empty
     #[derive(Clone, PartialEq, ::prost::Message)]
@@ -56,12 +54,10 @@ pub mod proto_pre_game_message {
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Inner {
         #[prost(message, tag = "1")]
-        HostGameAck(ProtoHostGameAck),
-        #[prost(message, tag = "2")]
         JoinGameAck(ProtoJoinGameAck),
-        #[prost(message, tag = "3")]
+        #[prost(message, tag = "2")]
         PlayerJoinMsg(ProtoPlayerJoinMsg),
-        #[prost(message, tag = "4")]
+        #[prost(message, tag = "3")]
         GameStartMsg(ProtoGameStartMsg),
     }
 }

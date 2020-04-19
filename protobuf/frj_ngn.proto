@@ -32,34 +32,30 @@ message ProtoHostGameReq {
 message ProtoJoinGameReq {
     string player_id = 1;
     string game_id = 2;
+    ProtoGameType game_type = 3;
 }
 
+// Stream message type
 message ProtoPreGameMessage {
     oneof inner {
-        ProtoHostGameAck host_game_ack = 1;
-        ProtoJoinGameAck join_game_ack = 2;
-        ProtoPlayerJoinMsg player_join_msg = 3;
-        ProtoGameStartMsg game_start_msg = 4;
+        ProtoJoinGameAck join_game_ack = 1;
+        ProtoPlayerJoinMsg player_join_msg = 2;
+        ProtoGameStartMsg game_start_msg = 3;
     }
 
-    // Initial response in ProtoPreGameMessage stream for host
-    message ProtoHostGameAck {
-        // Empty
-    }
-
-    // Initial response in ProtoPreGameMessage stream for guest
+    // Initial response in PreGame stream
     message ProtoJoinGameAck {
         ProtoGameType game_type = 1;
         string host_player_id = 2;
         repeated string other_player_ids = 3;
     }
 
-    // N intermediate messages received in ProtoPreGameMessage stream for host/guest
+    // N intermediate messages received in PreGame stream
     message ProtoPlayerJoinMsg {
         string player_id = 1;
     }
 
-    // Terminal message received in ProtoPreGameMessage stream for host/guest
+    // Terminal message received in PreGame stream
     message ProtoGameStartMsg {
         // Empty
     }

@@ -35,7 +35,7 @@ impl LoveLetterInstanceManager {
 #[derive(Debug)]
 pub enum LoveLetterEvent {
     // Common(?)
-    Join(String, Box<dyn ClientOut + Send>),
+    JoinGame(String, Box<dyn ClientOut + Send>),
     StartGame(String),
     GetGameState(String),
 
