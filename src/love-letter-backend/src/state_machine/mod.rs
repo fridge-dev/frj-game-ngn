@@ -2,7 +2,7 @@ mod handler;
 
 use crate::LoveLetterEvent;
 use crate::types::{StagedPlay, GameData};
-use backend_framework::{Players, MessageErrType};
+use backend_framework::Players;
 
 const MIN_PLAYERS: usize = 2;
 const MAX_PLAYERS: usize = 4;

@@ -1,0 +1,17 @@
+[package]
+name = "client-engine"
+version = "0.1.0"
+authors = ["Alec Von Arx <al.vonarx@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# 1p
+
+# 3p
+async-trait = "0.1.24"
+tokio = { version = "0.2", features = ["full"] }
+tonic = "0.1.1"
+prost = "0.6.1"
+
+[build-dependencies]
+tonic-build = "0.1.1"

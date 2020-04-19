@@ -17,8 +17,8 @@ fn main() -> io::Result<()> {
 fn build_proto() -> io::Result<()> {
     tonic_build::configure()
         .out_dir("./src/wire_api/")
-        .build_client(false)
-        .build_server(true)
+        .build_client(true)
+        .build_server(false)
         .compile(
             &["./../../protobuf/frj_ngn.proto"],
             &["./../../protobuf/"],
