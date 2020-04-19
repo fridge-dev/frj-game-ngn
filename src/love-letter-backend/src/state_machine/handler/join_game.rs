@@ -1,6 +1,6 @@
 use crate::state_machine::{LoveLetterInstanceState, StateMachineEventHandler, MAX_PLAYERS};
 use backend_framework::{ClientOut, MessageErrType};
-use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::ProtoJoinGameAck;
+use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::{ProtoJoinGameAck, ProtoPlayerJoinMsg};
 use backend_framework::wire_api::proto_frj_ngn::ProtoGameType;
 
 impl StateMachineEventHandler {
@@ -27,14 +27,14 @@ impl StateMachineEventHandler {
             return;
         }
 
-        self.add_player_and_send_ack(player_id, client_out);
+        self.add_player_and_send_ack(player_id.clone(), client_out);
+        self.notify_other_players(player_id);
     }
 
     fn add_player_and_send_ack(&mut self, player_id: String, client_out: Box<dyn ClientOut + Send>) {
         self.players.add(player_id.clone(), client_out);
 
-        let (party_leader_index_opt, mut player_ids) = self.players.party_leader_and_all_player_ids();
-        let party_leader_index = party_leader_index_opt.expect("BUG: Just added a player, but no party leader present");
+        let (party_leader_index, mut player_ids) = self.players.party_leader_and_all_player_ids();
 
         let party_leader_player_id = player_ids.remove(party_leader_index);
 
@@ -43,5 +43,18 @@ impl StateMachineEventHandler {
             host_player_id: party_leader_player_id,
             other_player_ids: player_ids,
         })
+    }
+
+    fn notify_other_players(&self, new_player_id: String) {
+        let mut players_to_notify = self.players.player_ids();
+        players_to_notify.retain(|pid| pid != &new_player_id);
+
+        let msg = ProtoPlayerJoinMsg {
+            player_id: new_player_id
+        };
+
+        for existing_player_id in players_to_notify.iter() {
+            self.players.send_pre_game_message(existing_player_id, msg.clone());
+        }
     }
 }

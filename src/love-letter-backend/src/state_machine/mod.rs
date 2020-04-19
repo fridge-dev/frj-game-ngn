@@ -47,8 +47,8 @@ impl LoveLetterStateMachine {
                 self.handler.get_game_state(player_id);
                 from_state
             },
-            LoveLetterEvent::StartGame(player_id) => {
-                self.handler.start_game(from_state, player_id)
+            LoveLetterEvent::StartGame(player_id, response_sender) => {
+                self.handler.start_game(from_state, player_id, response_sender)
             },
             LoveLetterEvent::PlayCardStaged(player_id, card_source) => {
                 self.handler.play_card_staged(from_state, player_id, card_source)

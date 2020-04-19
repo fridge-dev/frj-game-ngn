@@ -3,69 +3,67 @@ pub mod wire_api;
 pub mod shuffler;
 
 use crate::wire_api::proto_frj_ngn::ProtoPreGameMessage;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use tonic::Code;
 
 pub struct Players {
-    out_by_player_id: HashMap<String, Box<dyn ClientOut + Send>>,
-    // TODO lifetimes learning opportunity:
-    //      use reference here, because the string is always a key in the map.
-    // TODO If Playsers was only instantiated at the time when a new player joins,
-    //      then we could avoid Option.
-    party_leader_player_id: Option<String>,
+    inner: Vec<PlayerData>,
+    party_leader_index: usize,
+}
+
+struct PlayerData {
+    pub player_id: String,
+    pub client_out: Box<dyn ClientOut + Send>,
 }
 
 impl Players {
 
     pub fn new() -> Self {
         Players {
-            out_by_player_id: HashMap::new(),
-            party_leader_player_id: None
+            inner: Vec::new(),
+            party_leader_index: 0,
         }
     }
 
     pub fn add(&mut self, player_id: String, client_out: Box<dyn ClientOut + Send>) {
-        if self.party_leader_player_id.is_none() {
-            self.party_leader_player_id = Some(player_id.clone());
-        }
-        self.out_by_player_id.insert(player_id, client_out);
+        self.inner.push(PlayerData { player_id, client_out });
     }
 
     pub fn contains(&self, player_id: &String) -> bool {
-        self.out_by_player_id.contains_key(player_id)
+        self.find_player(player_id).is_some()
+    }
+
+    // O(n), could be O(1), but n will always be less than 10.
+    fn find_player(&self, player_id: &String) -> Option<&PlayerData> {
+        for player in self.inner.iter() {
+            if player_id == &player.player_id {
+                return Some(player);
+            }
+        }
+
+        None
     }
 
     pub fn count(&self) -> usize {
-        self.out_by_player_id.len()
+        self.inner.len()
     }
 
     pub fn player_ids(&self) -> Vec<String> {
-        self.out_by_player_id
-            .keys()
-            .map(|k| k.to_owned())
+        self.inner
+            .iter()
+            .map(|player| player.player_id.clone())
             .collect()
     }
 
-    pub fn party_leader(&self) -> &Option<String> {
-        &self.party_leader_player_id
-    }
-
-    pub fn party_leader_and_all_player_ids(&self) -> (Option<usize>, Vec<String>) {
-        let player_ids = self.player_ids();
-        let index_of_party_leader = match &self.party_leader_player_id {
+    pub fn party_leader(&self) -> Option<&String> {
+        match self.inner.get(self.party_leader_index) {
             None => None,
-            Some(party_leader) => player_ids.iter().position(|pid| pid == party_leader),
-        };
-
-        (index_of_party_leader, player_ids)
+            Some(player) => Some(&player.player_id)
+        }
     }
 
-    fn out_stream<F: FnOnce(&Box<dyn ClientOut + Send>) -> ()>(&self, player_id: &String, send_func: F) {
-        match self.out_by_player_id.get(player_id) {
-            None => println!("ERROR: Cannot send message, Player '{}' not found.", player_id),
-            Some(out) => send_func(out),
-        }
+    pub fn party_leader_and_all_player_ids(&self) -> (usize, Vec<String>) {
+        (self.party_leader_index, self.player_ids())
     }
 
     pub fn send_pre_game_message(
@@ -83,6 +81,20 @@ impl Players {
         err_type: MessageErrType
     ) {
         self.out_stream(player_id, |out| out.send_error_message(message.into(), err_type))
+    }
+
+    fn out_stream<F>(
+        &self,
+        player_id: &String,
+        send_func: F
+    ) where
+        F: FnOnce(&Box<dyn ClientOut + Send>) -> ()
+    {
+        if let Some(player) = self.find_player(player_id) {
+            send_func(&player.client_out);
+        } else {
+            println!("ERROR: Cannot send message, Player '{}' not found.", player_id);
+        }
     }
 }
 

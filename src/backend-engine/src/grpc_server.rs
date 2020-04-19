@@ -7,10 +7,11 @@ use backend_framework::{ClientOut, MessageErrType};
 use love_letter_backend::LoveLetterEvent;
 use std::convert::TryFrom;
 use std::error::Error;
-use tokio::sync::mpsc;
-use tonic::{Request, Response, Status, Streaming, Code};
-use std::fmt::{Debug, Formatter};
 use std::fmt;
+use std::fmt::{Debug, Formatter};
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
+use tonic::{Request, Response, Status, Streaming, Code};
 
 /// Backend server is the entry point which will implement the gRPC server type.
 pub struct FrjServer {
@@ -77,8 +78,27 @@ impl ProtoFridgeGameEngine for FrjServer {
         Ok(Response::new(rx))
     }
 
-    async fn start_game(&self, _request: Request<ProtoStartGameReq>) -> Result<Response<ProtoStartGameReply>, Status> {
-        unimplemented!()
+    async fn start_game(&self, request: Request<ProtoStartGameReq>) -> Result<Response<ProtoStartGameReply>, Status> {
+        let req = request.into_inner();
+
+        let (tx, rx) = oneshot::channel::<ProtoStartGameReply>();
+
+        let event = match ProtoGameType::try_from(req.game_type)? {
+            ProtoGameType::UnspecifiedGameType => unimplemented!(),
+            ProtoGameType::LoveLetter => {
+                GameEvent::LoveLetter(LoveLetterEvent::StartGame(req.player_id, tx))
+            },
+            ProtoGameType::LostCities => unimplemented!(),
+        };
+
+        self.games.send(req.game_id, event);
+
+        rx.await
+            .map(|reply| Response::new(reply))
+            .map_err(|e| {
+                println!("ERROR: Failed to start game. Oneshot sender dropped before sending the reply; Debug: {:?}, Display: {}", e, e);
+                Status::new(Code::Internal, "Failed to start the game")
+            })
     }
 
     async fn get_game_state(&self, _request: Request<ProtoGetGameStateReq>) -> Result<Response<ProtoGetGameStateReply>, Status> {
@@ -99,7 +119,6 @@ fn make_client_out(tx: mpsc::UnboundedSender<Result<ProtoPreGameMessage, Status>
 }
 
 // TODO remove this trait if it turns out it's unnecessary.
-#[derive(Debug)]
 struct StreamClientOut {
     sender: mpsc::UnboundedSender<Result<ProtoPreGameMessage, Status>>,
 }
@@ -121,3 +140,8 @@ impl ClientOut for StreamClientOut {
     }
 }
 
+impl Debug for StreamClientOut {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "StreamClientOut {{...}}")
+    }
+}

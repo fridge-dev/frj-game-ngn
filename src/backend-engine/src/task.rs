@@ -43,13 +43,13 @@ impl GameManagerTask {
     }
 
     async fn event_loop(mut self) {
-        println!("Starting event loop.");
+        println!("INFO: Starting event loop.");
 
         while let Some((game_id, event)) = self.receiver.recv().await {
-            println!("Received event for game {}: {:?}", game_id, event);
+            println!("INFO: Received event for game {}: {:?}", game_id, event);
             self.game_manager.handle(game_id, event);
         }
 
-        println!("Exiting event loop.");
+        println!("INFO: Exiting event loop.");
     }
 }

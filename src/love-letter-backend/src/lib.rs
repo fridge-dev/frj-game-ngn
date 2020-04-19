@@ -5,6 +5,8 @@ mod deck;
 use crate::types::Card;
 use crate::state_machine::{LoveLetterInstanceState, LoveLetterStateMachine};
 use backend_framework::{Holder, Players, ClientOut};
+use backend_framework::wire_api::proto_frj_ngn::ProtoStartGameReply;
+use tokio::sync::oneshot;
 
 // ================= Actor =================
 
@@ -36,7 +38,7 @@ impl LoveLetterInstanceManager {
 pub enum LoveLetterEvent {
     // Common(?)
     JoinGame(String, Box<dyn ClientOut + Send>),
-    StartGame(String),
+    StartGame(String, oneshot::Sender<ProtoStartGameReply>),
     GetGameState(String),
 
     // Game-specific
