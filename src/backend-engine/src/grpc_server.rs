@@ -2,13 +2,15 @@ use crate::task;
 use crate::task::{GameTaskClient};
 use crate::game_manager::GameEvent;
 use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server::ProtoFridgeGameEngine;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoGetGameStateReq, ProtoGetGameStateReply, ProtoGameDataIn, ProtoGameDataOut};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoGetGameStateReq, ProtoGetGameStateReply, ProtoGameDataIn, ProtoGameDataOut, ProtoStartGameReq, ProtoStartGameReply};
 use backend_framework::{ClientOut, MessageErrType};
 use love_letter_backend::LoveLetterEvent;
 use std::convert::TryFrom;
 use std::error::Error;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming, Code};
+use std::fmt::{Debug, Formatter};
+use std::fmt;
 
 /// Backend server is the entry point which will implement the gRPC server type.
 pub struct FrjServer {
@@ -73,6 +75,10 @@ impl ProtoFridgeGameEngine for FrjServer {
         self.games.send(req.game_id, event);
 
         Ok(Response::new(rx))
+    }
+
+    async fn start_game(&self, _request: Request<ProtoStartGameReq>) -> Result<Response<ProtoStartGameReply>, Status> {
+        unimplemented!()
     }
 
     async fn get_game_state(&self, _request: Request<ProtoGetGameStateReq>) -> Result<Response<ProtoGetGameStateReply>, Status> {

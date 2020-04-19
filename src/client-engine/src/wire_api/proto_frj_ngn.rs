@@ -62,13 +62,27 @@ pub mod proto_pre_game_message {
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoStartGameReq {
+    #[prost(string, tag = "1")]
+    pub player_id: std::string::String,
+    #[prost(string, tag = "2")]
+    pub game_id: std::string::String,
+    #[prost(enumeration = "ProtoGameType", tag = "3")]
+    pub game_type: i32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoStartGameReply {
+    #[prost(string, repeated, tag = "1")]
+    pub player_ids: ::std::vec::Vec<std::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoGetGameStateReq {
     #[prost(string, tag = "1")]
     pub player_id: std::string::String,
-    #[prost(enumeration = "ProtoGameType", tag = "2")]
-    pub game_type: i32,
-    #[prost(string, tag = "3")]
+    #[prost(string, tag = "2")]
     pub game_id: std::string::String,
+    #[prost(enumeration = "ProtoGameType", tag = "3")]
+    pub game_type: i32,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoGetGameStateReply {
@@ -272,6 +286,22 @@ pub mod proto_fridge_game_engine_client {
                 .server_streaming(request.into_request(), path, codec)
                 .await
         }
+        pub async fn start_game(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ProtoStartGameReq>,
+        ) -> Result<tonic::Response<super::ProtoStartGameReply>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/proto_frj_ngn.ProtoFridgeGameEngine/StartGame",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
         pub async fn get_game_state(
             &mut self,
             request: impl tonic::IntoRequest<super::ProtoGetGameStateReq>,
@@ -313,6 +343,11 @@ pub mod proto_fridge_game_engine_client {
             Self {
                 inner: self.inner.clone(),
             }
+        }
+    }
+    impl<T> std::fmt::Debug for ProtoFridgeGameEngineClient<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "ProtoFridgeGameEngineClient {{ ... }}")
         }
     }
 }

@@ -10,6 +10,7 @@ package proto_frj_ngn;
 service ProtoFridgeGameEngine {
     rpc HostGame (ProtoHostGameReq) returns (stream ProtoPreGameMessage) {}
     rpc JoinGame (ProtoJoinGameReq) returns (stream ProtoPreGameMessage) {}
+    rpc StartGame (ProtoStartGameReq) returns (ProtoStartGameReply) {}
 
     rpc GetGameState (ProtoGetGameStateReq) returns (ProtoGetGameStateReply) {}
 
@@ -61,10 +62,20 @@ message ProtoPreGameMessage {
     }
 }
 
+message ProtoStartGameReq {
+    string player_id = 1;
+    string game_id = 2;
+    ProtoGameType game_type = 3;
+}
+
+message ProtoStartGameReply {
+    repeated string player_ids = 1;
+}
+
 message ProtoGetGameStateReq {
     string player_id = 1;
-    ProtoGameType game_type = 2;
-    string game_id = 3;
+    string game_id = 2;
+    ProtoGameType game_type = 3;
 }
 
 message ProtoGetGameStateReply {

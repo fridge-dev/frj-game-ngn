@@ -62,13 +62,27 @@ pub mod proto_pre_game_message {
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoStartGameReq {
+    #[prost(string, tag = "1")]
+    pub player_id: std::string::String,
+    #[prost(string, tag = "2")]
+    pub game_id: std::string::String,
+    #[prost(enumeration = "ProtoGameType", tag = "3")]
+    pub game_type: i32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoStartGameReply {
+    #[prost(string, repeated, tag = "1")]
+    pub player_ids: ::std::vec::Vec<std::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoGetGameStateReq {
     #[prost(string, tag = "1")]
     pub player_id: std::string::String,
-    #[prost(enumeration = "ProtoGameType", tag = "2")]
-    pub game_type: i32,
-    #[prost(string, tag = "3")]
+    #[prost(string, tag = "2")]
     pub game_id: std::string::String,
+    #[prost(enumeration = "ProtoGameType", tag = "3")]
+    pub game_type: i32,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoGetGameStateReply {
@@ -222,6 +236,10 @@ pub mod proto_fridge_game_engine_server {
             &self,
             request: tonic::Request<super::ProtoJoinGameReq>,
         ) -> Result<tonic::Response<Self::JoinGameStream>, tonic::Status>;
+        async fn start_game(
+            &self,
+            request: tonic::Request<super::ProtoStartGameReq>,
+        ) -> Result<tonic::Response<super::ProtoStartGameReply>, tonic::Status>;
         async fn get_game_state(
             &self,
             request: tonic::Request<super::ProtoGetGameStateReq>,
@@ -337,6 +355,39 @@ pub mod proto_fridge_game_engine_server {
                             tonic::server::Grpc::new(codec)
                         };
                         let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/proto_frj_ngn.ProtoFridgeGameEngine/StartGame" => {
+                    #[allow(non_camel_case_types)]
+                    struct StartGameSvc<T: ProtoFridgeGameEngine>(pub Arc<T>);
+                    impl<T: ProtoFridgeGameEngine>
+                        tonic::server::UnaryService<super::ProtoStartGameReq> for StartGameSvc<T>
+                    {
+                        type Response = super::ProtoStartGameReply;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ProtoStartGameReq>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move { inner.start_game(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let interceptor = inner.1.clone();
+                        let inner = inner.0;
+                        let method = StartGameSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = if let Some(interceptor) = interceptor {
+                            tonic::server::Grpc::with_interceptor(codec, interceptor)
+                        } else {
+                            tonic::server::Grpc::new(codec)
+                        };
+                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
