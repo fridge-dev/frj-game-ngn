@@ -258,8 +258,11 @@ pub mod proto_fridge_game_engine_server {
             Self { inner }
         }
     }
-    impl<T: ProtoFridgeGameEngine> Service<http::Request<HyperBody>>
-        for ProtoFridgeGameEngineServer<T>
+    impl<T, B> Service<http::Request<B>> for ProtoFridgeGameEngineServer<T>
+    where
+        T: ProtoFridgeGameEngine,
+        B: HttpBody + Send + Sync + 'static,
+        B::Error: Into<StdError> + Send + 'static,
     {
         type Response = http::Response<tonic::body::BoxBody>;
         type Error = Never;
@@ -267,10 +270,11 @@ pub mod proto_fridge_game_engine_server {
         fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
-        fn call(&mut self, req: http::Request<HyperBody>) -> Self::Future {
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
                 "/proto_frj_ngn.ProtoFridgeGameEngine/HostGame" => {
+                    #[allow(non_camel_case_types)]
                     struct HostGameSvc<T: ProtoFridgeGameEngine>(pub Arc<T>);
                     impl<T: ProtoFridgeGameEngine>
                         tonic::server::ServerStreamingService<super::ProtoHostGameReq>
@@ -306,6 +310,7 @@ pub mod proto_fridge_game_engine_server {
                     Box::pin(fut)
                 }
                 "/proto_frj_ngn.ProtoFridgeGameEngine/JoinGame" => {
+                    #[allow(non_camel_case_types)]
                     struct JoinGameSvc<T: ProtoFridgeGameEngine>(pub Arc<T>);
                     impl<T: ProtoFridgeGameEngine>
                         tonic::server::ServerStreamingService<super::ProtoJoinGameReq>
@@ -341,6 +346,7 @@ pub mod proto_fridge_game_engine_server {
                     Box::pin(fut)
                 }
                 "/proto_frj_ngn.ProtoFridgeGameEngine/GetGameState" => {
+                    #[allow(non_camel_case_types)]
                     struct GetGameStateSvc<T: ProtoFridgeGameEngine>(pub Arc<T>);
                     impl<T: ProtoFridgeGameEngine>
                         tonic::server::UnaryService<super::ProtoGetGameStateReq>
@@ -374,6 +380,7 @@ pub mod proto_fridge_game_engine_server {
                     Box::pin(fut)
                 }
                 "/proto_frj_ngn.ProtoFridgeGameEngine/OpenGameDataStream" => {
+                    #[allow(non_camel_case_types)]
                     struct OpenGameDataStreamSvc<T: ProtoFridgeGameEngine>(pub Arc<T>);
                     impl<T: ProtoFridgeGameEngine>
                         tonic::server::StreamingService<super::ProtoGameDataIn>

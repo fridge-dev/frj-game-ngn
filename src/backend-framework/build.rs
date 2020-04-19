@@ -1,4 +1,3 @@
-use tonic_build;
 use std::io;
 
 /// I've created some hackery to work around my generated proto code not being visible in
@@ -25,3 +24,4 @@ fn build_proto() -> io::Result<()> {
             &["./../../protobuf/"],
         )
 }
+

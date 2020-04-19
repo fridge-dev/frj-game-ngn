@@ -1,5 +1,6 @@
 use crate::state_machine::{StateMachineEventHandler, LoveLetterInstanceState};
 use crate::types::{Card, RoundData};
+use backend_framework::MessageErrType;
 
 impl StateMachineEventHandler {
 
@@ -10,7 +11,7 @@ impl StateMachineEventHandler {
     ) -> LoveLetterInstanceState {
         match from_state {
             LoveLetterInstanceState::WaitingForStart => {
-                self.players.send_err(&player_id, "Can't play card before game start");
+                self.players.send_error_message(&player_id, "Can't play card before game start", MessageErrType::InvalidReq);
                 LoveLetterInstanceState::WaitingForStart
             },
             LoveLetterInstanceState::InProgress(game_data) => {
@@ -78,7 +79,7 @@ impl StateMachineEventHandler {
                     Some(next_card) => {
                         game_data.current_round.turn_cursor = (game_data.current_round.turn_cursor + 1) % game_data.player_id_turn_order.len();
                         let next_player = game_data.current_player_turn();
-                        self.players.send_msg(&next_player, format!("New card: {:?}", next_card));
+                        unimplemented!("Send next_card to player")
                     },
                 }
 

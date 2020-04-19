@@ -1,6 +1,7 @@
 use crate::state_machine::{StateMachineEventHandler, LoveLetterInstanceState};
 use crate::PlayCardSource;
 use crate::types::StagedPlay;
+use backend_framework::MessageErrType;
 
 impl StateMachineEventHandler {
 
@@ -18,7 +19,7 @@ impl StateMachineEventHandler {
         match from_state {
             LoveLetterInstanceState::WaitingForStart => {
                 // TODO idempotency?
-                self.players.send_err(&player_id, "Can't play before game has started");
+                self.players.send_error_message(&player_id, "Can't play before game has started", MessageErrType::InvalidReq);
 
                 // No state change
                 LoveLetterInstanceState::WaitingForStart
@@ -26,7 +27,7 @@ impl StateMachineEventHandler {
             LoveLetterInstanceState::InProgressStaged(game_data, staged_play) => {
                 // Is my turn
                 if &player_id != game_data.current_player_turn() {
-                    self.players.send_err(&player_id, "Can't play card, not your turn");
+                    self.players.send_error_message(&player_id, "Can't play card, not your turn", MessageErrType::InvalidReq);
                     return LoveLetterInstanceState::InProgressStaged(game_data, staged_play)
                 }
 
@@ -37,7 +38,7 @@ impl StateMachineEventHandler {
                     // Or send player some type of message telling
                     // them to re-get state
                 } else {
-                    self.players.send_err(&player_id, "Can't play card while pending commit");
+                    self.players.send_error_message(&player_id, "Can't play card while pending commit", MessageErrType::InvalidReq);
                 }
 
                 // No state change
@@ -45,7 +46,7 @@ impl StateMachineEventHandler {
             },
             LoveLetterInstanceState::InProgress(game_data) => {
                 if game_data.current_player_turn() != &player_id {
-                    self.players.send_err(&player_id, "Not your turn");
+                    self.players.send_error_message(&player_id, "Can't play card, not your turn", MessageErrType::InvalidReq);
 
                     // No state change
                     return LoveLetterInstanceState::InProgress(game_data);

@@ -20,18 +20,6 @@ pub struct LoveLetterStateMachine {
     handler: StateMachineEventHandler,
 }
 
-struct StateMachineEventHandler {
-    players: Players,
-}
-
-impl StateMachineEventHandler {
-    pub fn new(players: Players) -> Self {
-        StateMachineEventHandler {
-            players,
-        }
-    }
-}
-
 impl LoveLetterStateMachine {
     pub fn new(players: Players) -> Self {
         LoveLetterStateMachine {
@@ -74,6 +62,18 @@ impl LoveLetterStateMachine {
             LoveLetterEvent::PlayCardCommit(player_id) => {
                 self.handler.play_card_commit(from_state, player_id)
             }
+        }
+    }
+}
+
+struct StateMachineEventHandler {
+    players: Players,
+}
+
+impl StateMachineEventHandler {
+    pub fn new(players: Players) -> Self {
+        StateMachineEventHandler {
+            players,
         }
     }
 }
