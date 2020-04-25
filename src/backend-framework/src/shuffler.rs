@@ -2,6 +2,9 @@ use crate::prng::PrngRand;
 use rand::RngCore;
 use rand::seq::SliceRandom;
 
+/// Takes ownership and passes back same vector, but shuffled randomly. Also returns the
+/// `u64` seed used to seed the RNG. Log this if you want to be able to deterministically
+/// reproduce a random game.
 pub fn shuffle<T>(collection: Vec<T>) -> (Vec<T>, u64) {
     let seed = rand::thread_rng().next_u64();
     (shuffle_impl(collection, seed), seed)

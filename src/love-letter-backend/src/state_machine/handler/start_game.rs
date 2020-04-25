@@ -1,6 +1,6 @@
 use crate::state_machine::{StateMachineEventHandler, LoveLetterInstanceState, MIN_PLAYERS};
 use crate::types::GameData;
-use backend_framework::MessageErrType;
+use backend_framework::streaming::{MessageErrType, PlayerStreams};
 use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::ProtoGameStartMsg;
 use backend_framework::wire_api::proto_frj_ngn::ProtoStartGameReply;
 use tokio::sync::oneshot;
@@ -19,7 +19,7 @@ impl StateMachineEventHandler {
             _ => {
                 // TODO idempotency?
                 println!("INFO: Attempted to start game while not in correct state.");
-                self.players.send_error_message(&player_id, "Cannot start game. It's already started.", MessageErrType::InvalidReq);
+                self.players.send_pre_game_error(&player_id, "Cannot start game. It's already started.", MessageErrType::InvalidReq);
                 return from_state;
             }
         }
@@ -31,7 +31,7 @@ impl StateMachineEventHandler {
         };
         if !is_party_leader {
             println!("INFO: Non-party leader attempted to start game. Rejecting the call.");
-            self.players.send_error_message(&player_id, "Cannot start game. You are not party leader.", MessageErrType::InvalidReq);
+            self.players.send_pre_game_error(&player_id, "Cannot start game. You are not party leader.", MessageErrType::InvalidReq);
             return from_state;
         }
 
@@ -39,7 +39,7 @@ impl StateMachineEventHandler {
 
         // Not enough players
         if self.players.count() < MIN_PLAYERS {
-            self.players.send_error_message(&player_id, "Cannot start game. Not enough players", MessageErrType::InvalidReq);
+            self.players.send_pre_game_error(&player_id, "Cannot start game. Not enough players", MessageErrType::InvalidReq);
             return from_state;
         }
 
@@ -50,11 +50,11 @@ impl StateMachineEventHandler {
         to_state
     }
 
-    fn notify_all_players(&self, response_sender: oneshot::Sender<ProtoStartGameReply>) {
+    fn notify_all_players(&mut self, response_sender: oneshot::Sender<ProtoStartGameReply>) {
         let reply = ProtoStartGameReply {
             player_ids: self.players.player_ids()
         };
-        if let Err(e) = response_sender.send(reply) {
+        if let Err(_) = response_sender.send(reply) {
             println!("ERROR: Failed to send reply to oneshot channel. Receiver dropped.");
         }
 
@@ -64,7 +64,7 @@ impl StateMachineEventHandler {
             println!("DEBUG: Sending GameStart stream message to '{}'", player_id);
             self.players.send_pre_game_message(&player_id, ProtoGameStartMsg {})
         }
-        // TODO drop player map, close all streams.
+        self.players = PlayerStreams::new();
 
         println!("DEBUG: Done notifying all players of game start.");
     }

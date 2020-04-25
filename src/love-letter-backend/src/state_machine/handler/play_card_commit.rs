@@ -1,17 +1,17 @@
 use crate::state_machine::{StateMachineEventHandler, LoveLetterInstanceState};
 use crate::types::{Card, RoundData};
-use backend_framework::MessageErrType;
+use backend_framework::streaming::MessageErrType;
 
 impl StateMachineEventHandler {
 
     pub fn play_card_commit(
-        &self,
+        &mut self,
         from_state: LoveLetterInstanceState,
         player_id: String
     ) -> LoveLetterInstanceState {
         match from_state {
             LoveLetterInstanceState::WaitingForStart => {
-                self.players.send_error_message(&player_id, "Can't play card before game start", MessageErrType::InvalidReq);
+                self.players.send_pre_game_error(&player_id, "Can't play card before game start", MessageErrType::InvalidReq);
                 LoveLetterInstanceState::WaitingForStart
             },
             LoveLetterInstanceState::InProgress(game_data) => {

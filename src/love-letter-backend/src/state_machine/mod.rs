@@ -2,7 +2,7 @@ mod handler;
 
 use crate::LoveLetterEvent;
 use crate::types::{StagedPlay, GameData};
-use backend_framework::Players;
+use backend_framework::streaming::PlayerStreams;
 
 const MIN_PLAYERS: usize = 2;
 const MAX_PLAYERS: usize = 4;
@@ -21,7 +21,7 @@ pub struct LoveLetterStateMachine {
 }
 
 impl LoveLetterStateMachine {
-    pub fn new(players: Players) -> Self {
+    pub fn new(players: PlayerStreams) -> Self {
         LoveLetterStateMachine {
             handler: StateMachineEventHandler::new(players),
         }
@@ -39,8 +39,8 @@ impl LoveLetterStateMachine {
         event: LoveLetterEvent,
     ) -> LoveLetterInstanceState {
         match event {
-            LoveLetterEvent::JoinGame(player_id, client_out) => {
-                self.handler.join_game(player_id, client_out, &from_state);
+            LoveLetterEvent::JoinGame(player_id, stream_sender) => {
+                self.handler.join_game(player_id, stream_sender, &from_state);
                 from_state
             },
             LoveLetterEvent::GetGameState(player_id) => {
@@ -67,11 +67,11 @@ impl LoveLetterStateMachine {
 }
 
 struct StateMachineEventHandler {
-    players: Players,
+    players: PlayerStreams,
 }
 
 impl StateMachineEventHandler {
-    pub fn new(players: Players) -> Self {
+    pub fn new(players: PlayerStreams) -> Self {
         StateMachineEventHandler {
             players,
         }

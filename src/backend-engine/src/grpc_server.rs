@@ -3,12 +3,10 @@ use crate::task::{GameTaskClient};
 use crate::game_manager::GameEvent;
 use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server::ProtoFridgeGameEngine;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoGetGameStateReq, ProtoGetGameStateReply, ProtoGameDataIn, ProtoGameDataOut, ProtoStartGameReq, ProtoStartGameReply};
-use backend_framework::{ClientOut, MessageErrType};
+use backend_framework::streaming::StreamSender;
 use love_letter_backend::LoveLetterEvent;
 use std::convert::TryFrom;
 use std::error::Error;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tonic::{Request, Response, Status, Streaming, Code};
@@ -42,7 +40,7 @@ impl ProtoFridgeGameEngine for FrjServer {
         let req = request.into_inner();
 
         let (tx, rx) = mpsc::unbounded_channel();
-        let client_out = make_client_out(tx);
+        let client_out = make_pre_game_stream(tx);
 
         let event = match ProtoGameType::try_from(req.game_type)? {
             ProtoGameType::UnspecifiedGameType => unimplemented!(),
@@ -63,7 +61,7 @@ impl ProtoFridgeGameEngine for FrjServer {
         let req = request.into_inner();
 
         let (tx, rx) = mpsc::unbounded_channel();
-        let client_out = make_client_out(tx);
+        let client_out = make_pre_game_stream(tx);
 
         let event = match ProtoGameType::try_from(req.game_type)? {
             ProtoGameType::UnspecifiedGameType => unimplemented!(),
@@ -112,36 +110,6 @@ impl ProtoFridgeGameEngine for FrjServer {
     }
 }
 
-fn make_client_out(tx: mpsc::UnboundedSender<Result<ProtoPreGameMessage, Status>>) -> Box<StreamClientOut> {
-    Box::new(StreamClientOut {
-        sender: tx
-    })
-}
-
-// TODO remove this trait if it turns out it's unnecessary.
-struct StreamClientOut {
-    sender: mpsc::UnboundedSender<Result<ProtoPreGameMessage, Status>>,
-}
-
-impl ClientOut for StreamClientOut {
-
-    fn send_pre_game_message(&self, message: ProtoPreGameMessage) {
-        if let Err(msg) = self.sender.send(Ok(message)) {
-            println!("WARN: Client stream dropped. We failed to send message: {:?}", msg);
-        }
-    }
-
-    fn send_error_message(&self, message: String, err_type: MessageErrType) {
-        let status = Status::new(Code::from(err_type), message);
-
-        if let Err(msg) = self.sender.send(Err(status)) {
-            println!("WARN: Client stream dropped. We failed to send message: {:?}", msg);
-        }
-    }
-}
-
-impl Debug for StreamClientOut {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "StreamClientOut {{...}}")
-    }
+fn make_pre_game_stream(tx: mpsc::UnboundedSender<Result<ProtoPreGameMessage, Status>>) -> StreamSender<ProtoPreGameMessage> {
+    StreamSender::new(tx)
 }

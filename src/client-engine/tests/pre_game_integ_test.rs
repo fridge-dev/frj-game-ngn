@@ -112,10 +112,12 @@ async fn multi_join_and_start() -> Result<(), Box<dyn Error>> {
 
     // -- verify stream closure --
 
-    // TODO how to close streams on server side?
-//    get_next_message(&mut p1_stream, "p1_stream drop").await;
-//    get_next_message(&mut p2_stream, "p2_stream drop").await;
-//    get_next_message(&mut p3_stream, "p3_stream drop").await;
+    let closure_message = p1_stream.message().await.expect(&format!("Server returned Status err for p1_stream drop"));
+    assert_eq!(closure_message, None);
+    let closure_message = p2_stream.message().await.expect(&format!("Server returned Status err for p2_stream drop"));
+    assert_eq!(closure_message, None);
+    let closure_message = p3_stream.message().await.expect(&format!("Server returned Status err for p3_stream drop"));
+    assert_eq!(closure_message, None);
 
     Ok(())
 }
