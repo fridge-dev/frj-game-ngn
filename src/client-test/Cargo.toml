@@ -1,0 +1,13 @@
+[package]
+name = "client-test"
+version = "0.1.0"
+authors = ["Alec Von Arx <al.vonarx@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# 1p
+client-engine = { path = "../client-engine" }
+
+# 3p
+tokio = { version = "0.2", features = ["full"] }
+tonic = "0.2.0"

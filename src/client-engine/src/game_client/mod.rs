@@ -2,9 +2,8 @@ pub mod wrapper {
     use crate::wire_api::proto_frj_ngn::{ProtoHostGameReq, ProtoJoinGameReq, ProtoStartGameReq, ProtoStartGameReply, ProtoPreGameMessage};
     use crate::wire_api::proto_frj_ngn::proto_fridge_game_engine_client::ProtoFridgeGameEngineClient;
     use std::error::Error;
-    use tonic::codec::Streaming;
     use tonic::transport::{Channel, Endpoint};
-    use tonic::Status;
+    use tonic::{Status, Streaming};
 
     pub struct GameClient {
         inner_client: ProtoFridgeGameEngineClient<Channel>
@@ -24,6 +23,7 @@ pub mod wrapper {
             })
         }
 
+        // TODO abstract away the tonic dependency
         pub async fn host_game(&mut self, req: ProtoHostGameReq) -> Result<Streaming<ProtoPreGameMessage>, Status> {
             self.inner_client
                 .host_game(req)

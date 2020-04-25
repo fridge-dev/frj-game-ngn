@@ -4,5 +4,6 @@ members = [
   "src/backend-framework",
   "src/backend-server",
   "src/client-engine",
+  "src/client-test",
   "src/love-letter-backend",
 ]
