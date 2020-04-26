@@ -1,6 +1,6 @@
 use crate::state_machine::{StateMachineEventHandler, LoveLetterInstanceState, MIN_PLAYERS};
 use crate::types::GameData;
-use backend_framework::streaming::{MessageErrType, PlayerStreams};
+use backend_framework::streaming::{MessageErrType, PlayerPreGameStreams};
 use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::ProtoGameStartMsg;
 use backend_framework::wire_api::proto_frj_ngn::ProtoStartGameReply;
 use tokio::sync::oneshot;
@@ -64,7 +64,7 @@ impl StateMachineEventHandler {
             println!("DEBUG: Sending GameStart stream message to '{}'", player_id);
             self.players.send_pre_game_message(&player_id, ProtoGameStartMsg {})
         }
-        self.players = PlayerStreams::new();
+        self.players = PlayerPreGameStreams::new();
 
         println!("DEBUG: Done notifying all players of game start.");
     }

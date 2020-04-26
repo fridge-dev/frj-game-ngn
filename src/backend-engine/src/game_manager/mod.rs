@@ -5,7 +5,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub enum GameEvent {
     LoveLetter(LoveLetterEvent),
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO impl this game
     LostCities(LostCitiesEvent),
 }
 
@@ -40,3 +40,9 @@ impl GameManager {
         }
     }
 }
+
+pub mod api;
+
+mod default_impl;
+mod pre_game_instance_manager;
+mod pre_game;

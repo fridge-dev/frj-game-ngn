@@ -4,7 +4,7 @@ use tonic::{Code, Status};
 use std::fmt;
 use tokio::sync::mpsc;
 
-pub struct PlayerStreams {
+pub struct PlayerPreGameStreams {
     inner: Vec<PlayerData>,
     party_leader_index: usize,
 }
@@ -14,10 +14,10 @@ struct PlayerData {
     pub pre_game_stream: StreamSender<ProtoPreGameMessage>,
 }
 
-impl PlayerStreams {
+impl PlayerPreGameStreams {
 
     pub fn new() -> Self {
-        PlayerStreams {
+        PlayerPreGameStreams {
             inner: Vec::new(),
             party_leader_index: 0,
         }

@@ -2,7 +2,7 @@ mod handler;
 
 use crate::LoveLetterEvent;
 use crate::types::{StagedPlay, GameData};
-use backend_framework::streaming::PlayerStreams;
+use backend_framework::streaming::PlayerPreGameStreams;
 
 const MIN_PLAYERS: usize = 2;
 const MAX_PLAYERS: usize = 4;
@@ -21,9 +21,15 @@ pub struct LoveLetterStateMachine {
 }
 
 impl LoveLetterStateMachine {
-    pub fn new(players: PlayerStreams) -> Self {
+    pub fn new(players: PlayerPreGameStreams) -> Self {
         LoveLetterStateMachine {
             handler: StateMachineEventHandler::new(players),
+        }
+    }
+
+    pub fn new2() -> Self {
+        LoveLetterStateMachine {
+            handler: StateMachineEventHandler::new(unimplemented!())
         }
     }
 
@@ -67,11 +73,11 @@ impl LoveLetterStateMachine {
 }
 
 struct StateMachineEventHandler {
-    players: PlayerStreams,
+    players: PlayerPreGameStreams,
 }
 
 impl StateMachineEventHandler {
-    pub fn new(players: PlayerStreams) -> Self {
+    pub fn new(players: PlayerPreGameStreams) -> Self {
         StateMachineEventHandler {
             players,
         }
