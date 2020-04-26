@@ -9,5 +9,7 @@ edition = "2018"
 client-engine = { path = "../client-engine" }
 
 # 3p
+prost = "0.6.1"
+rand = "0.7.3"
 tokio = { version = "0.2", features = ["full"] }
 tonic = "0.2.0"
