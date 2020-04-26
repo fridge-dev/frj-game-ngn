@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+import "common.proto";
+
+// src depends on this. Change it carefully.
+package proto_frj_ngn;
+
+message ProtoLoveLetterDataIn {
+    oneof inner {
+        ProtoGameDataHeader header = 1;
+        ProtoGameDataStateReq game_state_req = 2;
+        ProtoLoLeExample ex_msg = 3;
+    }
+}
+
+message ProtoLoveLetterDataOut {
+    oneof inner {
+        ProtoLoLeGameState game_state = 1;
+    }
+}
+
+message ProtoLoLeExample {
+    string ex_field = 1;
+}
+
+message ProtoLoLeGameState {
+    string ex_field = 1;
+}
+
+// =======================================
+// API Request and Reply messages
+// =======================================
+
+// --- StageCard
+
+message ProtoStageCardReq {
+    string player_id = 1;
+    ProtoPlayCardSource card_source = 2;
+}
+
+message ProtoStageCardReply {
+    // Simple ACK
+}
+
+// --- SelectTargetPlayer
+
+message ProtoSelectTargetPlayerReq {
+    string player_id = 1;
+    string target_player_id = 2;
+}
+
+message ProtoSelectTargetPlayerReply {
+    // Simple ACK
+}
+
+// --- SelectTargetCard
+
+message ProtoSelectTargetCardReq {
+    string player_id = 1;
+    ProtoLoveLetterCard target_card = 2;
+}
+
+message ProtoSelectTargetCardReply {
+    // Simple ACK
+}
+
+// --- PlayCardCommit
+
+message ProtoPlayCardCommitReq {
+    string player_id = 1;
+}
+
+message ProtoPlayCardCommitReply {
+    // Simple ACK
+}
+
+// =======================================
+// Sub types
+// =======================================
+
+enum ProtoPlayCardSource {
+    UNSPECIFIED_PLAY_CARD_SOURCE = 0;
+    HAND = 1;
+    TOP_DECK = 2;
+}
+
+enum ProtoLoveLetterCard {
+    UNSPECIFIED_LOVE_LETTER_CARD = 0;
+    GUARD = 1;
+    PRIEST = 2;
+    BARON = 3;
+    HANDMAID = 4;
+    PRINCE = 5;
+    KING = 6;
+    COUNTESS = 7;
+    PRINCESS = 8;
+}

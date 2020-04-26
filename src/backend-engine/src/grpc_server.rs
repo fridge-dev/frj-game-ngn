@@ -2,7 +2,7 @@ use crate::task;
 use crate::task::{GameTaskClient};
 use crate::game_manager::GameEvent;
 use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server::ProtoFridgeGameEngine;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoGetGameStateReq, ProtoGetGameStateReply, ProtoGameDataIn, ProtoGameDataOut, ProtoStartGameReq, ProtoStartGameReply};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoStartGameReq, ProtoStartGameReply, ProtoLoveLetterDataIn, ProtoLoveLetterDataOut};
 use backend_framework::streaming::StreamSender;
 use love_letter_backend::LoveLetterEvent;
 use std::convert::TryFrom;
@@ -30,7 +30,7 @@ impl FrjServer {
 }
 
 type PreGameStream = mpsc::UnboundedReceiver<Result<ProtoPreGameMessage, Status>>;
-type GameDataStream = mpsc::UnboundedReceiver<Result<ProtoGameDataOut, Status>>;
+type GameDataStream<T> = mpsc::UnboundedReceiver<Result<T, Status>>;
 
 #[tonic::async_trait]
 impl ProtoFridgeGameEngine for FrjServer {
@@ -99,13 +99,9 @@ impl ProtoFridgeGameEngine for FrjServer {
             })
     }
 
-    async fn get_game_state(&self, _request: Request<ProtoGetGameStateReq>) -> Result<Response<ProtoGetGameStateReply>, Status> {
-        unimplemented!()
-    }
+    type OpenLoveLetterDataStreamStream = GameDataStream<ProtoLoveLetterDataOut>;
 
-    type OpenGameDataStreamStream = GameDataStream;
-
-    async fn open_game_data_stream(&self, _request: Request<Streaming<ProtoGameDataIn>>) -> Result<Response<Self::OpenGameDataStreamStream>, Status> {
+    async fn open_love_letter_data_stream(&self, _request: Request<Streaming<ProtoLoveLetterDataIn>>) -> Result<Response<Self::OpenLoveLetterDataStreamStream>, Status> {
         unimplemented!()
     }
 }

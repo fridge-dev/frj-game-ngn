@@ -1,28 +1,30 @@
 syntax = "proto3";
 
-// src/backend-server/src/wire_api/ depends on this. Change it carefully.
+import "love_letter.proto";
+import "common.proto";
+
+// src depends on this. Change it carefully.
 package proto_frj_ngn;
 
-// =======================================
+// ======================================================
 // Service
-// =======================================
+// ======================================================
 
 service ProtoFridgeGameEngine {
+    // -- Pre-game RPCs --
+
     rpc HostGame (ProtoHostGameReq) returns (stream ProtoPreGameMessage) {}
     rpc JoinGame (ProtoJoinGameReq) returns (stream ProtoPreGameMessage) {}
     rpc StartGame (ProtoStartGameReq) returns (ProtoStartGameReply) {}
 
-    rpc GetGameState (ProtoGetGameStateReq) returns (ProtoGetGameStateReply) {}
+    // -- Game specific RPCs --
 
-    rpc OpenGameDataStream (stream ProtoGameDataIn) returns (stream ProtoGameDataOut) {}
+    rpc OpenLoveLetterDataStream (stream ProtoLoveLetterDataIn) returns (stream ProtoLoveLetterDataOut) {}
 }
 
-// =======================================
-// API Request and Reply messages
-// =======================================
-
-// Convention: ALL messages should have prefix "Proto" so in the rust src, it's easy
-// to understand which types are generated.
+// ======================================================
+// API Request and Reply messages for Pre-game RPCs
+// ======================================================
 
 message ProtoHostGameReq {
     string player_id = 1;
@@ -70,117 +72,4 @@ message ProtoStartGameReq {
 
 message ProtoStartGameReply {
     repeated string player_ids = 1;
-}
-
-message ProtoGetGameStateReq {
-    string player_id = 1;
-    string game_id = 2;
-    ProtoGameType game_type = 3;
-}
-
-message ProtoGetGameStateReply {
-    ProtoJnGameState game_state = 1;
-}
-
-message ProtoGameDataIn {
-    oneof inner {
-        ProtoGameDataHeader header = 1;
-        ProtoJnGameDataIn data = 2;
-    }
-
-    message ProtoGameDataHeader {
-        string player_id = 1;
-        string game_id = 2;
-        ProtoGameType game_type = 3;
-    }
-}
-
-message ProtoGameDataOut {
-    oneof inner {
-        ProtoJnGameState game_state = 1;
-        ProtoJnGameDataOut data = 2;
-    }
-}
-
-// =======================================
-// Sub types
-// =======================================
-
-enum ProtoGameType {
-    UNSPECIFIED_GAME_TYPE = 0;
-    LOVE_LETTER = 1;
-    LOST_CITIES = 2;
-}
-
-// =======================================
-// Jn types
-// =======================================
-
-message ProtoJnGameState {
-    // TODO `Any` game-specific payload
-}
-
-message ProtoJnGameDataIn {
-    // TODO `Any` game-specific payload
-}
-
-message ProtoJnGameDataOut {
-    // TODO `Any` game-specific payload
-}
-
-// =======================================
-// LoveLetter types
-// =======================================
-
-enum ProtoPlayCardSource {
-    UNSPECIFIED_PLAY_CARD_SOURCE = 0;
-    HAND = 1;
-    TOP_DECK = 2;
-}
-
-enum ProtoLoveLetterCard {
-    UNSPECIFIED_LOVE_LETTER_CARD = 0;
-    GUARD = 1;
-    PRIEST = 2;
-    BARON = 3;
-    HANDMAID = 4;
-    PRINCE = 5;
-    KING = 6;
-    COUNTESS = 7;
-    PRINCESS = 8;
-}
-
-message ProtoStageCardReq {
-    string player_id = 1;
-    ProtoPlayCardSource card_source = 2;
-}
-
-message ProtoStageCardReply {
-    // Simple ACK
-}
-
-message ProtoSelectTargetPlayerReq {
-    string player_id = 1;
-    string target_player_id = 2;
-}
-
-message ProtoSelectTargetPlayerReply {
-    // Simple ACK
-}
-
-message ProtoSelectTargetCardReq {
-    string player_id = 1;
-    ProtoLoveLetterCard target_card = 2;
-}
-
-message ProtoSelectTargetCardReply {
-    // Simple ACK
-}
-
-message ProtoPlayCardCommitReq {
-    string player_id = 1;
-}
-
-message ProtoPlayCardCommitReply {
-
 }

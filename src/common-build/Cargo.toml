@@ -1,0 +1,9 @@
+[package]
+name = "common-build"
+version = "0.1.0"
+authors = ["Alec Von Arx <al.vonarx@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# 3p
+tonic-build = "0.2.0"
