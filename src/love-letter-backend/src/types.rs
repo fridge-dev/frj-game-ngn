@@ -58,6 +58,7 @@ impl GameData {
             .expect("Cursor should always ensure valid access")
     }
 
+    #[allow(dead_code)] // TODO implement
     pub fn commit_play(&mut self) {
         unimplemented!()
     }

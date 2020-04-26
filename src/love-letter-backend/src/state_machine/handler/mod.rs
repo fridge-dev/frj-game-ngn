@@ -1,3 +1,4 @@
+#![allow(unused_variables)] // TODO remove
 mod get_game_state;
 mod join_game;
 mod play_card_commit;
