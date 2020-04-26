@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 use tonic::transport::Server;
-use backend_engine::grpc_server::FrjServer;
+use backend_engine::grpc_server::frj_server::FrjServer;
 use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server::ProtoFridgeGameEngineServer;
 
 #[tokio::main]
