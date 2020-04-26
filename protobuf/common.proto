@@ -14,7 +14,7 @@ enum ProtoGameType {
     LOST_CITIES = 2;
 }
 
-message ProtoGameDataHeader {
+message ProtoGameDataHandshake {
     string player_id = 1;
     string game_id = 2;
     ProtoGameType game_type = 3;

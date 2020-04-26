@@ -7,7 +7,7 @@ package proto_frj_ngn;
 
 message ProtoLoveLetterDataIn {
     oneof inner {
-        ProtoGameDataHeader header = 1;
+        ProtoGameDataHandshake handshake = 1;
         ProtoGameDataStateReq game_state_req = 2;
         ProtoLoLeExample ex_msg = 3;
     }

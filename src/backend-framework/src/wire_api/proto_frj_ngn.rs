@@ -1,5 +1,5 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoGameDataHeader {
+pub struct ProtoGameDataHandshake {
     #[prost(string, tag = "1")]
     pub player_id: std::string::String,
     #[prost(string, tag = "2")]
@@ -30,7 +30,7 @@ pub mod proto_love_letter_data_in {
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Inner {
         #[prost(message, tag = "1")]
-        Header(super::ProtoGameDataHeader),
+        Handshake(super::ProtoGameDataHandshake),
         #[prost(message, tag = "2")]
         GameStateReq(super::ProtoGameDataStateReq),
         #[prost(message, tag = "3")]

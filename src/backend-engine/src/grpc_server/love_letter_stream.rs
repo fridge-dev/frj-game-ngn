@@ -3,7 +3,7 @@ use crate::grpc_server::frj_server::GameDataStream;
 use crate::grpc_server::stream_reader::StreamDriver;
 use crate::grpc_server::stream_reader::StreamMessageHandler;
 use backend_framework::streaming::StreamSender;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHeader};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHandshake};
 use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::Inner;
 use love_letter_backend::LoveLetterEvent;
 use tonic::{Streaming, Status, Code};
@@ -40,7 +40,7 @@ impl LoveLetterStreamOpener {
         Ok(rx)
     }
 
-    fn start_stream_driver(&self, stream_in: Streaming<ProtoLoveLetterDataIn>, handshake: ProtoGameDataHeader) {
+    fn start_stream_driver(&self, stream_in: Streaming<ProtoLoveLetterDataIn>, handshake: ProtoGameDataHandshake) {
         let handler = LoveLetterStreamHandler {
             game_repo_client: self.game_repo_client.unsized_clone(),
             game_id: handshake.game_id,
@@ -50,10 +50,10 @@ impl LoveLetterStreamOpener {
         tokio::spawn(stream_driver.run());
     }
 
-    async fn wait_for_handshake_message(&self, stream_in: &mut Streaming<ProtoLoveLetterDataIn>) -> Result<ProtoGameDataHeader, Status> {
+    async fn wait_for_handshake_message(&self, stream_in: &mut Streaming<ProtoLoveLetterDataIn>) -> Result<ProtoGameDataHandshake, Status> {
         match stream_in.message().await {
             Err(status) => {
-                println!("WARN: Received Status err when expected DataStreamHeader. Err: {:?}", status);
+                println!("WARN: Received Status err when expected Handshake. Err: {:?}", status);
                 Err(Status::new(Code::FailedPrecondition, "Failed to read message from stream upon opening."))
             },
             Ok(None) => {
@@ -61,13 +61,13 @@ impl LoveLetterStreamOpener {
                 Err(Status::new(Code::FailedPrecondition, "Read empty message from stream upon opening."))
             },
             Ok(Some(message)) => {
-                println!("DEBUG: Received open stream header message: {:?}", message);
+                println!("DEBUG: Received open stream Handshake message: {:?}", message);
                 match message.inner {
-                    Some(Inner::Header(header)) => {
-                        Ok(header)
+                    Some(Inner::Handshake(handshake)) => {
+                        Ok(handshake)
                     },
                     _ => {
-                        Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Header handshake message."))
+                        Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Handshake message."))
                     }
                 }
             },
@@ -97,8 +97,8 @@ impl LoveLetterStreamHandler {
             Inner::ExMsg(_msg) => {
                 Some(LoveLetterEvent::PlayCardCommit(self.player_id.clone()))
             },
-            Inner::Header(_header) => {
-                println!("INFO: Client sent header after stream handshake.");
+            Inner::Handshake(_handshake) => {
+                println!("INFO: Client stream sent Handshake message after handshake is done.");
                 self.notify_client_invalid_message();
                 None
             },
