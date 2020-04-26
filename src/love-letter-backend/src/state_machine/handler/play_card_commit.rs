@@ -1,24 +1,19 @@
-use crate::state_machine::{StateMachineEventHandler, LoveLetterInstanceState};
+use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
 use crate::types::{Card, RoundData};
-use backend_framework::streaming::MessageErrType;
 
-impl StateMachineEventHandler {
+impl LoveLetterStateMachineEventHandler {
 
     pub fn play_card_commit(
         &mut self,
-        from_state: LoveLetterInstanceState,
+        from_state: LoveLetterState,
         player_id: String
-    ) -> LoveLetterInstanceState {
+    ) -> LoveLetterState {
         match from_state {
-            LoveLetterInstanceState::WaitingForStart => {
-                self.players.send_pre_game_error(&player_id, "Can't play card before game start", MessageErrType::InvalidReq);
-                LoveLetterInstanceState::WaitingForStart
-            },
-            LoveLetterInstanceState::InProgress(game_data) => {
+            LoveLetterState::InProgress(game_data) => {
                 // TODO if selection not-needed, auto-commit
-                LoveLetterInstanceState::InProgress(game_data)
+                LoveLetterState::InProgress(game_data)
             },
-            LoveLetterInstanceState::InProgressStaged(mut game_data, staged_play) => {
+            LoveLetterState::InProgressStaged(mut game_data, staged_play) => {
                 // Perform action
                 match staged_play.card {
                     Card::Guard => {
@@ -83,7 +78,7 @@ impl StateMachineEventHandler {
                     },
                 }
 
-                LoveLetterInstanceState::InProgress(game_data)
+                LoveLetterState::InProgress(game_data)
             },
         }
     }

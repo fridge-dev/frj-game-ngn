@@ -2,14 +2,11 @@ mod handler;
 
 use crate::LoveLetterEvent;
 use crate::types::{StagedPlay, GameData};
-use backend_framework::streaming::PlayerPreGameStreams;
-
-const MIN_PLAYERS: usize = 2;
-const MAX_PLAYERS: usize = 4;
+use backend_framework::data_stream::PlayerDataStreams;
+use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
 
 /// The possible states of an instance of the game.
-pub enum LoveLetterInstanceState {
-    WaitingForStart,
+pub enum LoveLetterState {
     InProgress(GameData),
     InProgressStaged(GameData, StagedPlay),
 }
@@ -17,19 +14,13 @@ pub enum LoveLetterInstanceState {
 /// A state machine executor. It operates on states as inputs/outputs, not owned data.
 /// Although it does own some data specific to a game instance.
 pub struct LoveLetterStateMachine {
-    handler: StateMachineEventHandler,
+    handler: LoveLetterStateMachineEventHandler,
 }
 
 impl LoveLetterStateMachine {
-    pub fn new(players: PlayerPreGameStreams) -> Self {
+    pub fn new(player_ids: Vec<String>) -> Self {
         LoveLetterStateMachine {
-            handler: StateMachineEventHandler::new(players),
-        }
-    }
-
-    pub fn new2() -> Self {
-        LoveLetterStateMachine {
-            handler: StateMachineEventHandler::new(unimplemented!())
+            handler: LoveLetterStateMachineEventHandler::new(player_ids),
         }
     }
 
@@ -41,45 +32,42 @@ impl LoveLetterStateMachine {
     /// and we drop the game instance.
     pub fn transition_state(
         &mut self,
-        from_state: LoveLetterInstanceState,
+        from_state: LoveLetterState,
         event: LoveLetterEvent,
-    ) -> LoveLetterInstanceState {
+    ) -> LoveLetterState {
         match event {
-            LoveLetterEvent::JoinGame(player_id, stream_sender) => {
-                self.handler.join_game(player_id, stream_sender, &from_state);
-                from_state
-            },
             LoveLetterEvent::GetGameState(player_id) => {
                 self.handler.get_game_state(player_id);
                 from_state
             },
-            LoveLetterEvent::StartGame(player_id, response_sender) => {
-                self.handler.start_game(from_state, player_id, response_sender)
+            LoveLetterEvent::RegisterDataStream(player_id, stream_out) => {
+                self.handler.players.add_stream(player_id, stream_out);
+                from_state
             },
             LoveLetterEvent::PlayCardStaged(player_id, card_source) => {
                 self.handler.play_card_staged(from_state, player_id, card_source)
             },
             LoveLetterEvent::SelectTargetPlayer(client_player_id, target_player_id) => {
                 self.handler.select_target_player(from_state, client_player_id, target_player_id)
-            }
+            },
             LoveLetterEvent::SelectTargetCard(client_player_id, target_card) => {
                 self.handler.select_target_card(from_state, client_player_id, target_card)
-            }
+            },
             LoveLetterEvent::PlayCardCommit(player_id) => {
                 self.handler.play_card_commit(from_state, player_id)
-            }
+            },
         }
     }
 }
 
-struct StateMachineEventHandler {
-    players: PlayerPreGameStreams,
+struct LoveLetterStateMachineEventHandler {
+    players: PlayerDataStreams<ProtoLoveLetterDataOut>,
 }
 
-impl StateMachineEventHandler {
-    pub fn new(players: PlayerPreGameStreams) -> Self {
-        StateMachineEventHandler {
-            players,
+impl LoveLetterStateMachineEventHandler {
+    pub fn new(player_ids: Vec<String>) -> Self {
+        LoveLetterStateMachineEventHandler {
+            players: PlayerDataStreams::new(player_ids)
         }
     }
 }

@@ -1,21 +1,20 @@
-use crate::state_machine::{StateMachineEventHandler, LoveLetterInstanceState};
+use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
 use crate::types::Card;
 
-impl StateMachineEventHandler {
+impl LoveLetterStateMachineEventHandler {
 
     pub fn select_target_card(
         &self,
-        from_state: LoveLetterInstanceState,
+        from_state: LoveLetterState,
         client_player_id: String,
         target_card: Card
-    ) -> LoveLetterInstanceState {
+    ) -> LoveLetterState {
         // TODO being lazy, fill out full match statement... Only happy path for now
         match from_state {
-            LoveLetterInstanceState::WaitingForStart => from_state,
-            LoveLetterInstanceState::InProgress(_) => from_state,
-            LoveLetterInstanceState::InProgressStaged(game_data, mut staged_play) => {
+            LoveLetterState::InProgress(_) => from_state,
+            LoveLetterState::InProgressStaged(game_data, mut staged_play) => {
                 staged_play.set_target_card(target_card);
-                LoveLetterInstanceState::InProgressStaged(game_data, staged_play)
+                LoveLetterState::InProgressStaged(game_data, staged_play)
             },
         }
     }

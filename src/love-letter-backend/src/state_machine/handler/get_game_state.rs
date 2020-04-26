@@ -1,6 +1,6 @@
-use crate::state_machine::StateMachineEventHandler;
+use crate::state_machine::LoveLetterStateMachineEventHandler;
 
-impl StateMachineEventHandler {
+impl LoveLetterStateMachineEventHandler {
     pub fn get_game_state(&self, _player_id: String) {
         unimplemented!()
     }

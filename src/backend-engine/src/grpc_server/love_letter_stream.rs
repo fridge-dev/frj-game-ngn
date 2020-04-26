@@ -28,11 +28,14 @@ impl LoveLetterStreamOpener {
             return Err(Status::new(Code::FailedPrecondition, "Invalid game type in Handshake message."));
         }
 
-        self.start_stream_driver(stream_in, handshake);
-
         let (tx, rx) = mpsc::unbounded_channel();
-        // TODO register client_out game data stream in game manager
-        let _client_out = StreamSender::new(tx);
+        let stream_out = StreamSender::new(tx);
+        self.game_repo_client.handle_event_love_letter(LoveLetterEvent::RegisterDataStream(
+            handshake.player_id.clone(),
+            stream_out
+        ));
+
+        self.start_stream_driver(stream_in, handshake);
 
         Ok(rx)
     }
@@ -89,10 +92,10 @@ impl LoveLetterStreamHandler {
     fn convert_message(&self, inner: Inner) -> Option<LoveLetterEvent> {
         match inner {
             Inner::GameStateReq(_) => {
-                Some(LoveLetterEvent::GetGameState("TODO remove this param from API".to_owned()))
+                Some(LoveLetterEvent::GetGameState(self.player_id.clone()))
             },
             Inner::ExMsg(_msg) => {
-                Some(LoveLetterEvent::PlayCardCommit("TODO".to_owned()))
+                Some(LoveLetterEvent::PlayCardCommit(self.player_id.clone()))
             },
             Inner::Header(_header) => {
                 println!("INFO: Client sent header after stream handshake.");

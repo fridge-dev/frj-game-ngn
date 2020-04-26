@@ -29,7 +29,7 @@ impl DefaultGameRepository {
     fn create_typed_game(&mut self, game: GameIdentifier, player_ids: Vec<String>) {
         match game.game_type {
             GameType::LoveLetter => {
-                self.love_letter_instances.insert(game.game_id, LoveLetterInstanceManager::new2(player_ids));
+                self.love_letter_instances.insert(game.game_id, LoveLetterInstanceManager::new(player_ids));
             },
             GameType::LostCities => {
                 self.lost_cities_instances.insert(game.game_id, LostCitiesInstanceManager::new());

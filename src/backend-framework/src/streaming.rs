@@ -42,13 +42,6 @@ impl PlayerPreGameStreams {
         self.inner
             .iter()
             .find(|&player| &player.player_id == player_id)
-//        for player in self.inner.iter() {
-//            if player_id == &player.player_id {
-//                return Some(player);
-//            }
-//        }
-//
-//        None
     }
 
     pub fn count(&self) -> usize {
@@ -126,6 +119,11 @@ impl<M: prost::Message> StreamSender<M> {
         );
         self.sender.send(Err(status))
             .map_err(|msg| println!("WARN: Client stream dropped. We failed to send message: {:?}", msg))
+    }
+
+    pub(crate) fn disconnect_with_err(self, status: Status) {
+        let _ = self.sender.send(Err(status));
+        // Drop `self` closes the stream
     }
 }
 
