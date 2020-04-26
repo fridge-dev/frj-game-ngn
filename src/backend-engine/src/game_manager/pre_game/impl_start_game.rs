@@ -16,7 +16,7 @@ impl PreGameInstanceManager {
         player_id: String,
         response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>,
     ) -> Result<Vec<String>, Self> {
-        if self.is_party_leader(&player_id) {
+        if !self.is_party_leader(&player_id) {
             println!("INFO: Non-party leader '{}' attempted to start game. Rejecting the call.", player_id);
             let _ = response_sender.send(Err(Status::failed_precondition("You are not party leader.")));
             return Err(self);

@@ -1,11 +1,10 @@
 use crate::task;
-use crate::task::{GameTaskClient};
-use crate::game_manager::GameEvent;
 use crate::grpc_server::love_letter_stream::LoveLetterStreamOpener;
+use crate::game_manager::api::GameRepositoryClient;
+use crate::game_manager::types::{GameType, GameIdentifier};
 use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server::ProtoFridgeGameEngine;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoHostGameReq, ProtoJoinGameReq, ProtoGameType, ProtoStartGameReq, ProtoStartGameReply, ProtoLoveLetterDataIn, ProtoLoveLetterDataOut};
 use backend_framework::streaming::StreamSender;
-use love_letter_backend::LoveLetterEvent;
 use std::convert::TryFrom;
 use std::error::Error;
 use tokio::sync::mpsc;
@@ -14,28 +13,28 @@ use tonic::{Request, Response, Status, Streaming, Code};
 
 /// Backend server is the entry point which will implement the gRPC server type.
 pub struct FrjServer {
-    game_task_client: GameTaskClient,
+    game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
     love_letter_stream_opener: LoveLetterStreamOpener,
 }
 
 impl FrjServer {
 
     pub fn start() -> Result<Self, Box<dyn Error>> {
-        let task_client = task::start_backend();
-        let love_letter_stream_opener = LoveLetterStreamOpener::new(task_client.clone());
+        let game_repo_client = task::start_repository_instance();
+        let love_letter_stream_opener = LoveLetterStreamOpener::new(game_repo_client.unsized_clone());
 
         Ok(FrjServer::new(
-            task_client,
+            game_repo_client,
             love_letter_stream_opener
         ))
     }
 
     fn new(
-        game_task_client: GameTaskClient,
+        game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
         love_letter_stream_opener: LoveLetterStreamOpener,
     ) -> Self {
         FrjServer {
-            game_task_client,
+            game_repo_client,
             love_letter_stream_opener,
         }
     }
@@ -46,6 +45,7 @@ pub type GameDataStream<T> = mpsc::UnboundedReceiver<Result<T, Status>>;
 
 #[tonic::async_trait]
 impl ProtoFridgeGameEngine for FrjServer {
+
     type HostGameStream = PreGameStream;
 
     async fn host_game(&self, request: Request<ProtoHostGameReq>) -> Result<Response<Self::HostGameStream>, Status> {
@@ -54,15 +54,16 @@ impl ProtoFridgeGameEngine for FrjServer {
         let (tx, rx) = mpsc::unbounded_channel();
         let client_out = StreamSender::new(tx);
 
-        let event = match ProtoGameType::try_from(req.game_type)? {
-            ProtoGameType::UnspecifiedGameType => unimplemented!(),
-            ProtoGameType::LoveLetter => {
-                GameEvent::LoveLetter(LoveLetterEvent::JoinGame(req.player_id, client_out))
-            },
-            ProtoGameType::LostCities => unimplemented!(),
+        let game_type = GameType::try_from(ProtoGameType::try_from(req.game_type)?)?;
+        let game = GameIdentifier {
+            game_id: req.game_id,
+            game_type
         };
 
-        self.game_task_client.send(req.game_id, event);
+        // This currently relies on the assumption of serialized access, which I'm only like
+        // 90% sure will always work as expected. Might have to properly synchronize this later.
+        self.game_repo_client.create_game(game.clone());
+        self.game_repo_client.register_pregame_stream(req.player_id, game, client_out);
 
         Ok(Response::new(rx))
     }
@@ -75,15 +76,13 @@ impl ProtoFridgeGameEngine for FrjServer {
         let (tx, rx) = mpsc::unbounded_channel();
         let client_out = StreamSender::new(tx);
 
-        let event = match ProtoGameType::try_from(req.game_type)? {
-            ProtoGameType::UnspecifiedGameType => unimplemented!(),
-            ProtoGameType::LoveLetter => {
-                GameEvent::LoveLetter(LoveLetterEvent::JoinGame(req.player_id, client_out))
-            },
-            ProtoGameType::LostCities => unimplemented!(),
+        let game_type = GameType::try_from(ProtoGameType::try_from(req.game_type)?)?;
+        let game = GameIdentifier {
+            game_id: req.game_id,
+            game_type
         };
 
-        self.game_task_client.send(req.game_id, event);
+        self.game_repo_client.register_pregame_stream(req.player_id, game, client_out);
 
         Ok(Response::new(rx))
     }
@@ -91,24 +90,22 @@ impl ProtoFridgeGameEngine for FrjServer {
     async fn start_game(&self, request: Request<ProtoStartGameReq>) -> Result<Response<ProtoStartGameReply>, Status> {
         let req = request.into_inner();
 
-        let (tx, rx) = oneshot::channel::<ProtoStartGameReply>();
+        let (tx, rx) = oneshot::channel::<Result<ProtoStartGameReply, Status>>();
 
-        let event = match ProtoGameType::try_from(req.game_type)? {
-            ProtoGameType::UnspecifiedGameType => unimplemented!(),
-            ProtoGameType::LoveLetter => {
-                GameEvent::LoveLetter(LoveLetterEvent::StartGame(req.player_id, tx))
-            },
-            ProtoGameType::LostCities => unimplemented!(),
+        let game_type = GameType::try_from(ProtoGameType::try_from(req.game_type)?)?;
+        let game = GameIdentifier {
+            game_id: req.game_id,
+            game_type
         };
 
-        self.game_task_client.send(req.game_id, event);
+        self.game_repo_client.start_game(req.player_id, game, tx);
 
         rx.await
-            .map(|reply| Response::new(reply))
             .map_err(|e| {
                 println!("ERROR: Failed to start game. Oneshot sender dropped before sending the reply; Debug: {:?}, Display: {}", e, e);
                 Status::new(Code::Internal, "Failed to start the game")
-            })
+            })?
+            .map(|reply| Response::new(reply))
     }
 
     type OpenLoveLetterDataStreamStream = GameDataStream<ProtoLoveLetterDataOut>;

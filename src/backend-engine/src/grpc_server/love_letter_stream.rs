@@ -1,23 +1,22 @@
-use crate::game_manager::GameEvent;
+use crate::game_manager::api::GameRepositoryClient;
 use crate::grpc_server::frj_server::GameDataStream;
 use crate::grpc_server::stream_reader::StreamDriver;
 use crate::grpc_server::stream_reader::StreamMessageHandler;
-use crate::task::GameTaskClient;
+use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHeader};
 use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::Inner;
 use love_letter_backend::LoveLetterEvent;
 use tonic::{Streaming, Status, Code};
 use tokio::sync::mpsc;
-use backend_framework::streaming::StreamSender;
 
 pub struct LoveLetterStreamOpener {
-    game_task_client: GameTaskClient
+    game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
 }
 
 impl LoveLetterStreamOpener {
-    pub fn new(game_task_client: GameTaskClient) -> Self {
+    pub fn new(game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>) -> Self {
         LoveLetterStreamOpener {
-            game_task_client
+            game_repo_client
         }
     }
 
@@ -40,7 +39,7 @@ impl LoveLetterStreamOpener {
 
     fn start_stream_driver(&self, stream_in: Streaming<ProtoLoveLetterDataIn>, handshake: ProtoGameDataHeader) {
         let handler = LoveLetterStreamHandler {
-            game_task_client: self.game_task_client.clone(),
+            game_repo_client: self.game_repo_client.unsized_clone(),
             game_id: handshake.game_id,
             player_id: handshake.player_id,
         };
@@ -71,49 +70,56 @@ impl LoveLetterStreamOpener {
             },
         }
     }
-
 }
 
 struct LoveLetterStreamHandler {
-    game_task_client: GameTaskClient,
+    game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
+    #[allow(dead_code)] // TODO is this needed?
     game_id: String,
     #[allow(dead_code)] // TODO is this needed?
     player_id: String,
 }
 
 impl LoveLetterStreamHandler {
-    fn fwd(&self, event: GameEvent) {
-        self.game_task_client.send(self.game_id.clone(), event);
+
+    fn fwd(&self, event: LoveLetterEvent) {
+        self.game_repo_client.handle_event_love_letter(event);
     }
 
-    fn convert_message(inner: Inner) -> Option<GameEvent> {
+    fn convert_message(&self, inner: Inner) -> Option<LoveLetterEvent> {
         match inner {
             Inner::GameStateReq(_) => {
-                Some(GameEvent::LoveLetter(LoveLetterEvent::GetGameState("TODO remove this param from API".to_owned())))
+                Some(LoveLetterEvent::GetGameState("TODO remove this param from API".to_owned()))
             },
             Inner::ExMsg(_msg) => {
-                Some(GameEvent::LoveLetter(LoveLetterEvent::PlayCardCommit("TODO".to_owned())))
+                Some(LoveLetterEvent::PlayCardCommit("TODO".to_owned()))
             },
             Inner::Header(_header) => {
-                // TODO: notify client that `messageId` was invalid.
                 println!("INFO: Client sent header after stream handshake.");
+                self.notify_client_invalid_message();
                 None
             },
         }
     }
+
+    fn notify_client_invalid_message(&self) {
+        // TODO: notify client that `messageId` was invalid.
+        unimplemented!()
+    }
 }
 
 impl StreamMessageHandler<ProtoLoveLetterDataIn> for LoveLetterStreamHandler {
+
     fn handle_message(&self, message: ProtoLoveLetterDataIn) {
         match message.inner {
             Some(inner) => {
-                if let Some(event) = LoveLetterStreamHandler::convert_message(inner) {
+                if let Some(event) = self.convert_message(inner) {
                     self.fwd(event);
                 }
             },
             None => {
-                // TODO: notify client that `messageId` was invalid.
                 println!("INFO: Client sent data message with missing payload.");
+                self.notify_client_invalid_message();
             },
         }
     }

@@ -9,7 +9,4 @@ impl LostCitiesInstanceManager {
         LostCitiesInstanceManager {}
     }
 
-    pub fn handle_event(&mut self, _: LostCitiesEvent) {
-        unimplemented!()
-    }
 }

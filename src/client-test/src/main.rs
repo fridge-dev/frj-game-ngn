@@ -117,6 +117,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     assert_eq!(closure_message, None);
     println!("Player 3 server closed stream.");
 
+    println!();
+    println!("GREEN");
     Ok(())
 }
 

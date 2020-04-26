@@ -1,4 +1,4 @@
-use crate::game_manager::api::GameType;
+use crate::game_manager::types::GameType;
 use backend_framework::streaming::PlayerPreGameStreams;
 
 mod impl_join_game;
