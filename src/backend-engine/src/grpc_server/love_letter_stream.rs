@@ -4,10 +4,11 @@ use crate::grpc_server::stream_reader::StreamDriver;
 use crate::grpc_server::stream_reader::StreamMessageHandler;
 use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHandshake};
-use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::Inner;
-use love_letter_backend::LoveLetterEvent;
+use love_letter_backend::{LoveLetterEventType, LoveLetterEvent};
 use tonic::{Streaming, Status, Code};
 use tokio::sync::mpsc;
+use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::proto_data_in::PayloadIn;
+use backend_framework::common_types::ClientInfo;
 
 pub struct LoveLetterStreamOpener {
     game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
@@ -30,10 +31,13 @@ impl LoveLetterStreamOpener {
 
         let (tx, rx) = mpsc::unbounded_channel();
         let stream_out = StreamSender::new(tx);
-        self.game_repo_client.handle_event_love_letter(LoveLetterEvent::RegisterDataStream(
-            handshake.player_id.clone(),
-            stream_out
-        ));
+        self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
+            payload: LoveLetterEventType::RegisterDataStream(stream_out),
+            client: ClientInfo {
+                player_id: handshake.player_id.clone(),
+                game_id: handshake.game_id.clone()
+            },
+        });
 
         self.start_stream_driver(stream_in, handshake);
 
@@ -43,8 +47,10 @@ impl LoveLetterStreamOpener {
     fn start_stream_driver(&self, stream_in: Streaming<ProtoLoveLetterDataIn>, handshake: ProtoGameDataHandshake) {
         let handler = LoveLetterStreamHandler {
             game_repo_client: self.game_repo_client.unsized_clone(),
-            game_id: handshake.game_id,
-            player_id: handshake.player_id,
+            client: ClientInfo {
+                player_id: handshake.player_id,
+                game_id: handshake.game_id
+            },
         };
         let stream_driver = StreamDriver::new(stream_in, handler);
         tokio::spawn(stream_driver.run());
@@ -61,14 +67,19 @@ impl LoveLetterStreamOpener {
                 Err(Status::new(Code::FailedPrecondition, "Read empty message from stream upon opening."))
             },
             Ok(Some(message)) => {
-                println!("DEBUG: Received open stream Handshake message: {:?}", message);
-                match message.inner {
-                    Some(Inner::Handshake(handshake)) => {
-                        Ok(handshake)
-                    },
-                    _ => {
-                        Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Handshake message."))
+                println!("DEBUG: Received initial stream message: {:?}", message);
+                match message.data {
+                    None => {
+                        println!("INFO: Stream initial message is missing data.");
+                        Err(Status::new(Code::FailedPrecondition, "Expected data stream message to have data."))
                     }
+                    Some(data) => match data.payload_in {
+                        Some(PayloadIn::Handshake(handshake)) => Ok(handshake),
+                        _ => {
+                            println!("INFO: Stream initial message is not Handshake.");
+                            Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Handshake message."))
+                        },
+                    },
                 }
             },
         }
@@ -77,32 +88,29 @@ impl LoveLetterStreamOpener {
 
 struct LoveLetterStreamHandler {
     game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
-    #[allow(dead_code)] // TODO is this needed?
-    game_id: String,
-    #[allow(dead_code)] // TODO is this needed?
-    player_id: String,
+    client: ClientInfo,
 }
 
 impl LoveLetterStreamHandler {
 
-    fn fwd(&self, event: LoveLetterEvent) {
-        self.game_repo_client.handle_event_love_letter(event);
-    }
-
-    fn convert_message(&self, inner: Inner) -> Option<LoveLetterEvent> {
-        match inner {
-            Inner::GameStateReq(_) => {
-                Some(LoveLetterEvent::GetGameState(self.player_id.clone()))
-            },
-            Inner::ExMsg(_msg) => {
-                Some(LoveLetterEvent::PlayCardCommit(self.player_id.clone()))
-            },
-            Inner::Handshake(_handshake) => {
+    fn convert_and_send_message(&self, payload: PayloadIn) {
+        let event_type = match payload {
+            PayloadIn::Handshake(_) => {
                 println!("INFO: Client stream sent Handshake message after handshake is done.");
                 self.notify_client_invalid_message();
-                None
+                return;
             },
-        }
+            PayloadIn::GameState(_) => LoveLetterEventType::GetGameState,
+            _ => {
+                // TODO TODONEXT start here
+                unimplemented!()
+            }
+        };
+
+        self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
+            client: self.client.clone(),
+            payload: event_type
+        });
     }
 
     fn notify_client_invalid_message(&self) {
@@ -114,14 +122,18 @@ impl LoveLetterStreamHandler {
 impl StreamMessageHandler<ProtoLoveLetterDataIn> for LoveLetterStreamHandler {
 
     fn handle_message(&self, message: ProtoLoveLetterDataIn) {
-        match message.inner {
-            Some(inner) => {
-                if let Some(event) = self.convert_message(inner) {
-                    self.fwd(event);
-                }
+        match message.data {
+            Some(data) => match data.payload_in {
+                Some(payload_in) => {
+                    self.convert_and_send_message(payload_in);
+                },
+                None => {
+                    println!("INFO: Client sent data message with missing payload.");
+                    self.notify_client_invalid_message();
+                },
             },
             None => {
-                println!("INFO: Client sent data message with missing payload.");
+                println!("INFO: Client sent data message with missing data_in.");
                 self.notify_client_invalid_message();
             },
         }

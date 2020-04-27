@@ -3,4 +3,5 @@ pub mod holder;
 pub mod prng;
 pub mod shuffler;
 pub mod streaming;
+pub mod common_types;
 pub mod wire_api;

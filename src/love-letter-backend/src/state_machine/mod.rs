@@ -1,6 +1,6 @@
 mod handler;
 
-use crate::LoveLetterEvent;
+use crate::{LoveLetterEventType, LoveLetterEvent};
 use crate::types::{StagedPlay, GameData};
 use backend_framework::data_stream::PlayerDataStreams;
 use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
@@ -35,25 +35,27 @@ impl LoveLetterStateMachine {
         from_state: LoveLetterState,
         event: LoveLetterEvent,
     ) -> LoveLetterState {
-        match event {
-            LoveLetterEvent::GetGameState(player_id) => {
+        let player_id = event.client.player_id;
+
+        match event.payload {
+            LoveLetterEventType::GetGameState => {
                 self.handler.get_game_state(player_id);
                 from_state
             },
-            LoveLetterEvent::RegisterDataStream(player_id, stream_out) => {
+            LoveLetterEventType::RegisterDataStream(stream_out) => {
                 self.handler.players.add_stream(player_id, stream_out);
                 from_state
             },
-            LoveLetterEvent::PlayCardStaged(player_id, card_source) => {
+            LoveLetterEventType::PlayCardStaged(card_source) => {
                 self.handler.play_card_staged(from_state, player_id, card_source)
             },
-            LoveLetterEvent::SelectTargetPlayer(client_player_id, target_player_id) => {
-                self.handler.select_target_player(from_state, client_player_id, target_player_id)
+            LoveLetterEventType::SelectTargetPlayer(target_player_id) => {
+                self.handler.select_target_player(from_state, player_id, target_player_id)
             },
-            LoveLetterEvent::SelectTargetCard(client_player_id, target_card) => {
-                self.handler.select_target_card(from_state, client_player_id, target_card)
+            LoveLetterEventType::SelectTargetCard(target_card) => {
+                self.handler.select_target_card(from_state, player_id, target_card)
             },
-            LoveLetterEvent::PlayCardCommit(player_id) => {
+            LoveLetterEventType::PlayCardCommit => {
                 self.handler.play_card_commit(from_state, player_id)
             },
         }

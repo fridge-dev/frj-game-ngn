@@ -14,6 +14,7 @@ enum ProtoGameType {
     LOST_CITIES = 2;
 }
 
+// Every Data Stream should begin by client sending a handshake message to server.
 message ProtoGameDataHandshake {
     string player_id = 1;
     string game_id = 2;

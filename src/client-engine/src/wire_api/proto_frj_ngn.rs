@@ -1,3 +1,4 @@
+/// Every Data Stream should begin by client sending a handshake message to server.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoGameDataHandshake {
     #[prost(string, tag = "1")]
@@ -21,108 +22,238 @@ pub enum ProtoGameType {
     LoveLetter = 1,
     LostCities = 2,
 }
+// =======================================
+// Data Stream Messages
+// =======================================
+
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLoveLetterDataIn {
-    #[prost(oneof = "proto_love_letter_data_in::Inner", tags = "1, 2, 3")]
-    pub inner: ::std::option::Option<proto_love_letter_data_in::Inner>,
+    /// Logical clock for this game instance
+    #[prost(uint64, tag = "1")]
+    pub clock: u64,
+    /// The actual message
+    #[prost(message, optional, tag = "2")]
+    pub data: ::std::option::Option<proto_love_letter_data_in::ProtoDataIn>,
 }
 pub mod proto_love_letter_data_in {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Inner {
-        #[prost(message, tag = "1")]
-        Handshake(super::ProtoGameDataHandshake),
-        #[prost(message, tag = "2")]
-        GameStateReq(super::ProtoGameDataStateReq),
-        #[prost(message, tag = "3")]
-        ExMsg(super::ProtoLoLeExample),
+    /// It works?
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoDataIn {
+        #[prost(oneof = "proto_data_in::PayloadIn", tags = "1, 2, 3, 4, 5, 6")]
+        pub payload_in: ::std::option::Option<proto_data_in::PayloadIn>,
+    }
+    pub mod proto_data_in {
+        #[derive(Clone, PartialEq, ::prost::Oneof)]
+        pub enum PayloadIn {
+            #[prost(message, tag = "1")]
+            Handshake(super::super::ProtoGameDataHandshake),
+            #[prost(message, tag = "2")]
+            GameState(super::super::ProtoGameDataStateReq),
+            #[prost(message, tag = "3")]
+            PlayCard(super::super::ProtoLvLePlayCardReq),
+            #[prost(message, tag = "4")]
+            SelectTargetPlayer(super::super::ProtoLvLeSelectTargetPlayer),
+            #[prost(message, tag = "5")]
+            SelectTargetCard(super::super::ProtoLvLeSelectTargetCard),
+            #[prost(message, tag = "6")]
+            CommitSelection(super::super::ProtoLvLeCommitSelectionReq),
+        }
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLoveLetterDataOut {
-    #[prost(oneof = "proto_love_letter_data_out::Inner", tags = "1")]
-    pub inner: ::std::option::Option<proto_love_letter_data_out::Inner>,
+    /// Logical clock for this game instance
+    #[prost(uint64, tag = "1")]
+    pub clock: u64,
+    /// The actual message
+    #[prost(message, optional, tag = "2")]
+    pub data: ::std::option::Option<proto_love_letter_data_out::ProtoDataOut>,
 }
 pub mod proto_love_letter_data_out {
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Inner {
-        #[prost(message, tag = "1")]
-        GameState(super::ProtoLoLeGameState),
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoDataOut {
+        #[prost(oneof = "proto_data_out::PayloadOut", tags = "1, 2, 3, 4, 5, 6, 7")]
+        pub payload_out: ::std::option::Option<proto_data_out::PayloadOut>,
     }
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoLoLeExample {
-    #[prost(string, tag = "1")]
-    pub ex_field: std::string::String,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoLoLeGameState {
-    #[prost(string, tag = "1")]
-    pub ex_field: std::string::String,
+    pub mod proto_data_out {
+        #[derive(Clone, PartialEq, ::prost::Oneof)]
+        pub enum PayloadOut {
+            #[prost(message, tag = "1")]
+            GameState(super::super::ProtoLvLeGameState),
+            #[prost(message, tag = "2")]
+            TurnIndicator(super::super::ProtoLvLeTurnIndicatorRepl),
+            #[prost(message, tag = "3")]
+            PlayCard(super::super::ProtoLvLePlayCardRepl),
+            #[prost(message, tag = "4")]
+            StageCard(super::super::ProtoLvLeStageCardRepl),
+            #[prost(message, tag = "5")]
+            SelectTargetPlayer(super::super::ProtoLvLeSelectTargetPlayer),
+            #[prost(message, tag = "6")]
+            SelectTargetCard(super::super::ProtoLvLeSelectTargetCard),
+            #[prost(message, tag = "7")]
+            CommitSelection(super::super::ProtoLvLeCommitSelectionRepl),
+        }
+    }
 }
 // =======================================
 // API Request and Reply messages
 // =======================================
 
-// --- StageCard
+// --- GameState
 
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoStageCardReq {
+pub struct ProtoLvLeGameState {
+    /// Logical clock for this game instance
+    #[prost(uint64, tag = "1")]
+    pub clock: u64,
+    #[prost(message, repeated, tag = "2")]
+    pub players: ::std::vec::Vec<proto_lv_le_game_state::ProtoLvLePlayerState>,
+    #[prost(enumeration = "ProtoLvLeCard", tag = "3")]
+    pub my_card: i32,
+    #[prost(string, tag = "4")]
+    pub current_turn_player_id: std::string::String,
+    #[prost(enumeration = "ProtoLvLeCard", repeated, tag = "5")]
+    pub play_history: ::std::vec::Vec<i32>,
+}
+pub mod proto_lv_le_game_state {
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoLvLePlayerState {
+        #[prost(string, tag = "1")]
+        pub player_id: std::string::String,
+        #[prost(bool, tag = "2")]
+        pub in_play: bool,
+        #[prost(uint32, tag = "3")]
+        pub round_wins: u32,
+    }
+}
+// --- TurnIndicator
+
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoLvLeTurnIndicatorRepl {
+    /// Current player's turn
     #[prost(string, tag = "1")]
     pub player_id: std::string::String,
-    #[prost(enumeration = "ProtoPlayCardSource", tag = "2")]
+    /// The new card drawn from top deck
+    #[prost(enumeration = "ProtoLvLeCard", tag = "2")]
+    pub your_card: i32,
+}
+// --- PlayCard
+
+/// Req: First action taken during a turn
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoLvLePlayCardReq {
+    #[prost(enumeration = "proto_lv_le_play_card_req::CardSource", tag = "1")]
     pub card_source: i32,
 }
-/// Simple ACK
+pub mod proto_lv_le_play_card_req {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+    #[repr(i32)]
+    pub enum CardSource {
+        UnspecifiedCardSource = 0,
+        Hand = 1,
+        TopDeck = 2,
+    }
+}
+/// Repl: Sent when card has no selection.
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoStageCardReply {}
+pub struct ProtoLvLePlayCardRepl {
+    #[prost(enumeration = "ProtoLvLeCard", tag = "1")]
+    pub played_card: i32,
+    #[prost(message, optional, tag = "2")]
+    pub outcome: ::std::option::Option<ProtoLvLeCardOutcome>,
+}
+/// Repl: Sent when card requires selection
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoLvLeStageCardRepl {
+    #[prost(enumeration = "ProtoLvLeCard", tag = "1")]
+    pub played_card: i32,
+}
 // --- SelectTargetPlayer
 
+/// Req & Repl
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoSelectTargetPlayerReq {
+pub struct ProtoLvLeSelectTargetPlayer {
     #[prost(string, tag = "1")]
-    pub player_id: std::string::String,
-    #[prost(string, tag = "2")]
     pub target_player_id: std::string::String,
 }
-/// Simple ACK
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoSelectTargetPlayerReply {}
 // --- SelectTargetCard
 
+/// Req & Repl
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoSelectTargetCardReq {
-    #[prost(string, tag = "1")]
-    pub player_id: std::string::String,
-    #[prost(enumeration = "ProtoLoveLetterCard", tag = "2")]
+pub struct ProtoLvLeSelectTargetCard {
+    #[prost(enumeration = "ProtoLvLeCard", tag = "1")]
     pub target_card: i32,
 }
-/// Simple ACK
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoSelectTargetCardReply {}
-// --- PlayCardCommit
+// --- CommitSelection
 
+/// Req: Signal completion of selection phase of a turn
+///
+/// Empty
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoPlayCardCommitReq {
-    #[prost(string, tag = "1")]
-    pub player_id: std::string::String,
+pub struct ProtoLvLeCommitSelectionReq {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoLvLeCommitSelectionRepl {
+    #[prost(message, optional, tag = "1")]
+    pub outcome: ::std::option::Option<ProtoLvLeCardOutcome>,
 }
-/// Simple ACK
+/// Output data of effect:
+/// 1 - Guard    : `(bool)` - was guess correct
+/// 2 - Priest   : `()`
+/// 3 - Baron    : `(String, Card)` - the player+card that was knocked out
+/// 4 - Handmaid : `()`
+/// 5 - Prince   : `(Card)` - the discarded card
+/// 6 - King     : `(Card)` - new card received by each player
+/// 7 - Countess : `()`
+/// 8 - Princess : `()`
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ProtoPlayCardCommitReply {}
+pub struct ProtoLvLeCardOutcome {
+    /// Set to null for 2,4,7,8
+    #[prost(oneof = "proto_lv_le_card_outcome::Inner", tags = "1, 3, 5, 6")]
+    pub inner: ::std::option::Option<proto_lv_le_card_outcome::Inner>,
+}
+pub mod proto_lv_le_card_outcome {
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoGuardOutcome {
+        #[prost(bool, tag = "1")]
+        pub correct: bool,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoBaronOutcome {
+        #[prost(string, tag = "1")]
+        pub losing_player_id: std::string::String,
+        #[prost(enumeration = "super::ProtoLvLeCard", tag = "2")]
+        pub losing_player_card: i32,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoPrinceOutcome {
+        #[prost(enumeration = "super::ProtoLvLeCard", tag = "1")]
+        pub discarded_card: i32,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoKingOutcome {
+        #[prost(enumeration = "super::ProtoLvLeCard", tag = "1")]
+        pub new_card: i32,
+    }
+    /// Set to null for 2,4,7,8
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Inner {
+        #[prost(message, tag = "1")]
+        Guard(ProtoGuardOutcome),
+        #[prost(message, tag = "3")]
+        Baron(ProtoBaronOutcome),
+        #[prost(message, tag = "5")]
+        Prince(ProtoPrinceOutcome),
+        #[prost(message, tag = "6")]
+        King(ProtoKingOutcome),
+    }
+}
 // =======================================
-// Sub types
+// Common sub types
 // =======================================
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
-pub enum ProtoPlayCardSource {
-    UnspecifiedPlayCardSource = 0,
-    Hand = 1,
-    TopDeck = 2,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum ProtoLoveLetterCard {
+pub enum ProtoLvLeCard {
     UnspecifiedLoveLetterCard = 0,
     Guard = 1,
     Priest = 2,

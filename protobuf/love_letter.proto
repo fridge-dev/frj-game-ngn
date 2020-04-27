@@ -5,86 +5,137 @@ import "common.proto";
 // src depends on this. Change it carefully.
 package proto_frj_ngn;
 
+// =======================================
+// Data Stream Messages
+// =======================================
+
 message ProtoLoveLetterDataIn {
-    oneof inner {
-        ProtoGameDataHandshake handshake = 1;
-        ProtoGameDataStateReq game_state_req = 2;
-        ProtoLoLeExample ex_msg = 3;
+
+    // Logical clock for this game instance
+    uint64 clock = 1;
+
+    // The actual message
+    ProtoDataIn data = 2;
+
+    message ProtoDataIn {
+        oneof payload_in {
+            ProtoGameDataHandshake handshake = 1;
+            ProtoGameDataStateReq game_state = 2;
+            ProtoLvLePlayCardReq play_card = 3;
+            ProtoLvLeSelectTargetPlayer select_target_player = 4;
+            ProtoLvLeSelectTargetCard select_target_card = 5;
+            ProtoLvLeCommitSelectionReq commit_selection = 6;
+        }
     }
 }
 
 message ProtoLoveLetterDataOut {
-    oneof inner {
-        ProtoLoLeGameState game_state = 1;
+
+    // Logical clock for this game instance
+    uint64 clock = 1;
+
+    // The actual message
+    ProtoDataOut data = 2;
+
+    message ProtoDataOut {
+        oneof payload_out {
+            ProtoLvLeGameState game_state = 1;
+            ProtoLvLeTurnIndicatorRepl turn_indicator = 2;
+            ProtoLvLePlayCardRepl play_card = 3;
+            ProtoLvLeStageCardRepl stage_card = 4;
+            ProtoLvLeSelectTargetPlayer select_target_player = 5;
+            ProtoLvLeSelectTargetCard select_target_card = 6;
+            ProtoLvLeCommitSelectionRepl commit_selection = 7;
+        }
     }
-}
-
-message ProtoLoLeExample {
-    string ex_field = 1;
-}
-
-message ProtoLoLeGameState {
-    string ex_field = 1;
 }
 
 // =======================================
 // API Request and Reply messages
 // =======================================
 
-// --- StageCard
+// --- GameState
 
-message ProtoStageCardReq {
-    string player_id = 1;
-    ProtoPlayCardSource card_source = 2;
+message ProtoLvLeGameState {
+
+    // Logical clock for this game instance
+    uint64 clock = 1;
+    repeated ProtoLvLePlayerState players = 2;
+    ProtoLvLeCard my_card = 3;
+    string current_turn_player_id = 4;
+    repeated ProtoLvLeCard play_history = 5;
+
+    message ProtoLvLePlayerState {
+        string player_id = 1;
+        bool in_play = 2;
+        uint32 round_wins = 3;
+    }
 }
 
-message ProtoStageCardReply {
-    // Simple ACK
+// --- TurnIndicator
+
+message ProtoLvLeTurnIndicatorRepl {
+    // Current player's turn
+    string player_id = 1;
+
+    // The new card drawn from top deck
+    ProtoLvLeCard your_card = 2;
+}
+
+// --- PlayCard
+
+// Req: First action taken during a turn
+message ProtoLvLePlayCardReq {
+    CardSource card_source = 1;
+
+    enum CardSource {
+        UNSPECIFIED_CARD_SOURCE = 0;
+        HAND = 1;
+        TOP_DECK = 2;
+    }
+}
+
+// Repl: Sent when card has no selection.
+message ProtoLvLePlayCardRepl {
+    ProtoLvLeCard played_card = 1;
+    ProtoLvLeCardOutcome outcome = 2;
+}
+
+// Repl: Sent when card requires selection
+message ProtoLvLeStageCardRepl {
+    ProtoLvLeCard played_card = 1;
 }
 
 // --- SelectTargetPlayer
 
-message ProtoSelectTargetPlayerReq {
-    string player_id = 1;
-    string target_player_id = 2;
-}
-
-message ProtoSelectTargetPlayerReply {
-    // Simple ACK
+// Req & Repl
+message ProtoLvLeSelectTargetPlayer {
+    string target_player_id = 1;
 }
 
 // --- SelectTargetCard
 
-message ProtoSelectTargetCardReq {
-    string player_id = 1;
-    ProtoLoveLetterCard target_card = 2;
+// Req & Repl
+message ProtoLvLeSelectTargetCard {
+    ProtoLvLeCard target_card = 1;
 }
 
-message ProtoSelectTargetCardReply {
-    // Simple ACK
+// --- CommitSelection
+
+// Req: Signal completion of selection phase of a turn
+message ProtoLvLeCommitSelectionReq {
+    // Empty
 }
 
-// --- PlayCardCommit
-
-message ProtoPlayCardCommitReq {
-    string player_id = 1;
-}
-
-message ProtoPlayCardCommitReply {
-    // Simple ACK
+message ProtoLvLeCommitSelectionRepl {
+    ProtoLvLeCardOutcome outcome = 1;
 }
 
 // =======================================
-// Sub types
+// Common sub types
 // =======================================
 
-enum ProtoPlayCardSource {
-    UNSPECIFIED_PLAY_CARD_SOURCE = 0;
-    HAND = 1;
-    TOP_DECK = 2;
-}
-
-enum ProtoLoveLetterCard {
+enum ProtoLvLeCard {
     UNSPECIFIED_LOVE_LETTER_CARD = 0;
     GUARD = 1;
     PRIEST = 2;
@@ -94,4 +145,37 @@ enum ProtoLoveLetterCard {
     KING = 6;
     COUNTESS = 7;
     PRINCESS = 8;
+}
+
+// Output data of effect:
+// 1 - Guard    : `(bool)` - was guess correct
+// 2 - Priest   : `()`
+// 3 - Baron    : `(String, Card)` - the player+card that was knocked out
+// 4 - Handmaid : `()`
+// 5 - Prince   : `(Card)` - the discarded card
+// 6 - King     : `(Card)` - new card received by each player
+// 7 - Countess : `()`
+// 8 - Princess : `()`
+message ProtoLvLeCardOutcome {
+    // Set to null for 2,4,7,8
+    oneof inner {
+        ProtoGuardOutcome guard = 1;
+        ProtoBaronOutcome baron = 3;
+        ProtoPrinceOutcome prince = 5;
+        ProtoKingOutcome king = 6;
+    }
+
+    message ProtoGuardOutcome {
+        bool correct = 1;
+    }
+    message ProtoBaronOutcome {
+        string losing_player_id = 1;
+        ProtoLvLeCard losing_player_card = 2;
+    }
+    message ProtoPrinceOutcome {
+        ProtoLvLeCard discarded_card = 1;
+    }
+    message ProtoKingOutcome {
+        ProtoLvLeCard new_card = 1;
+    }
 }
