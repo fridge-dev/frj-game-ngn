@@ -1,5 +1,5 @@
 use crate::task;
-use crate::grpc_server::love_letter_stream::LoveLetterStreamOpener;
+use crate::grpc_server::love_letter_stream::LoveLetterStreamHandler;
 use crate::game_manager::api::GameRepositoryClient;
 use crate::game_manager::types::{GameType, GameIdentifier};
 use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server::ProtoFridgeGameEngine;
@@ -14,14 +14,14 @@ use tonic::{Request, Response, Status, Streaming, Code};
 /// Backend server is the entry point which will implement the gRPC server type.
 pub struct FrjServer {
     game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
-    love_letter_stream_opener: LoveLetterStreamOpener,
+    love_letter_stream_opener: LoveLetterStreamHandler,
 }
 
 impl FrjServer {
 
     pub fn start() -> Result<Self, Box<dyn Error>> {
         let game_repo_client = task::start_repository_instance();
-        let love_letter_stream_opener = LoveLetterStreamOpener::new(game_repo_client.unsized_clone());
+        let love_letter_stream_opener = LoveLetterStreamHandler::new(game_repo_client.unsized_clone());
 
         Ok(FrjServer::new(
             game_repo_client,
@@ -31,7 +31,7 @@ impl FrjServer {
 
     fn new(
         game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
-        love_letter_stream_opener: LoveLetterStreamOpener,
+        love_letter_stream_opener: LoveLetterStreamHandler,
     ) -> Self {
         FrjServer {
             game_repo_client,

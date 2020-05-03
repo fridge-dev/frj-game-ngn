@@ -15,17 +15,13 @@ message ProtoLoveLetterDataIn {
     uint64 clock = 1;
 
     // The actual message
-    ProtoDataIn data = 2;
-
-    message ProtoDataIn {
-        oneof payload_in {
-            ProtoGameDataHandshake handshake = 1;
-            ProtoGameDataStateReq game_state = 2;
-            ProtoLvLePlayCardReq play_card = 3;
-            ProtoLvLeSelectTargetPlayer select_target_player = 4;
-            ProtoLvLeSelectTargetCard select_target_card = 5;
-            ProtoLvLeCommitSelectionReq commit_selection = 6;
-        }
+    oneof proto_lv_le_in {
+        ProtoGameDataHandshake handshake = 2;
+        ProtoGameDataStateReq game_state = 3;
+        ProtoLvLePlayCardReq play_card = 4;
+        ProtoLvLeSelectTargetPlayer select_target_player = 5;
+        ProtoLvLeSelectTargetCard select_target_card = 6;
+        ProtoLvLeCommitSelectionReq commit_selection = 7;
     }
 }
 
@@ -35,18 +31,14 @@ message ProtoLoveLetterDataOut {
     uint64 clock = 1;
 
     // The actual message
-    ProtoDataOut data = 2;
-
-    message ProtoDataOut {
-        oneof payload_out {
-            ProtoLvLeGameState game_state = 1;
-            ProtoLvLeTurnIndicatorRepl turn_indicator = 2;
-            ProtoLvLePlayCardRepl play_card = 3;
-            ProtoLvLeStageCardRepl stage_card = 4;
-            ProtoLvLeSelectTargetPlayer select_target_player = 5;
-            ProtoLvLeSelectTargetCard select_target_card = 6;
-            ProtoLvLeCommitSelectionRepl commit_selection = 7;
-        }
+    oneof proto_lv_le_out {
+        ProtoLvLeGameState game_state = 2;
+        ProtoLvLeTurnIndicatorRepl turn_indicator = 3;
+        ProtoLvLePlayCardRepl play_card = 4;
+        ProtoLvLeStageCardRepl stage_card = 5;
+        ProtoLvLeSelectTargetPlayer select_target_player = 6;
+        ProtoLvLeSelectTargetCard select_target_card = 7;
+        ProtoLvLeCommitSelectionRepl commit_selection = 8;
     }
 }
 

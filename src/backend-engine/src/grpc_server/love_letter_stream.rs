@@ -5,60 +5,38 @@ use crate::grpc_server::stream_reader::StreamMessageHandler;
 use backend_framework::common_types::ClientInfo;
 use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHandshake};
-use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::proto_data_in::PayloadIn;
-use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::ProtoDataIn;
+use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::ProtoLvLeIn;
 use love_letter_backend::{LoveLetterEventType, LoveLetterEvent};
 use tokio::sync::mpsc;
 use tonic::{Streaming, Status, Code};
 
-pub struct LoveLetterStreamOpener {
+/// This struct is responsible for handling newly opened streams to the backend.
+pub struct LoveLetterStreamHandler {
     game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
 }
 
-impl LoveLetterStreamOpener {
+impl LoveLetterStreamHandler {
+
     pub fn new(game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>) -> Self {
-        LoveLetterStreamOpener {
+        LoveLetterStreamHandler {
             game_repo_client
         }
     }
 
-    pub async fn handle_new_stream(&self, mut stream_in: Streaming<ProtoLoveLetterDataIn>) -> Result<GameDataStream<ProtoLoveLetterDataOut>, Status> {
-        let handshake = self.wait_for_handshake_message(&mut stream_in).await?;
+    /// This method is called when the server receives a request to open a LoveLetter data stream.
+    pub async fn handle_new_stream(&self, mut stream_in_rcv: Streaming<ProtoLoveLetterDataIn>) -> Result<GameDataStream<ProtoLoveLetterDataOut>, Status> {
+        let handshake = self.wait_for_handshake_message(&mut stream_in_rcv).await?;
+        let client_info = self.validate_and_convert_handshake(handshake)?;
 
-        if handshake.game_type != ProtoGameType::LoveLetter as i32 {
-            println!("INFO: Invalid game type in Handshake message.");
-            return Err(Status::new(Code::FailedPrecondition, "Invalid game type in Handshake message."));
-        }
+        self.spawn_stream_driver_task(stream_in_rcv, client_info.clone());
 
         let (tx, rx) = mpsc::unbounded_channel();
-        let stream_out = StreamSender::new(tx);
-        self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
-            payload: LoveLetterEventType::RegisterDataStream(stream_out),
-            client: ClientInfo {
-                player_id: handshake.player_id.clone(),
-                game_id: handshake.game_id.clone()
-            },
-        });
-
-        self.start_stream_driver(stream_in, handshake);
-
+        self.register_stream_sender(tx, client_info);
         Ok(rx)
     }
 
-    fn start_stream_driver(&self, stream_in: Streaming<ProtoLoveLetterDataIn>, handshake: ProtoGameDataHandshake) {
-        let handler = LoveLetterStreamHandler {
-            game_repo_client: self.game_repo_client.unsized_clone(),
-            client: ClientInfo {
-                player_id: handshake.player_id,
-                game_id: handshake.game_id
-            },
-        };
-        let stream_driver = StreamDriver::new(stream_in, handler);
-        tokio::spawn(stream_driver.run());
-    }
-
-    async fn wait_for_handshake_message(&self, stream_in: &mut Streaming<ProtoLoveLetterDataIn>) -> Result<ProtoGameDataHandshake, Status> {
-        match stream_in.message().await {
+    async fn wait_for_handshake_message(&self, stream_in_recv: &mut Streaming<ProtoLoveLetterDataIn>) -> Result<ProtoGameDataHandshake, Status> {
+        match stream_in_recv.message().await {
             Err(status) => {
                 println!("WARN: Received Status err when expected Handshake. Err: {:?}", status);
                 Err(Status::new(Code::FailedPrecondition, "Failed to read message from stream upon opening."))
@@ -69,49 +47,82 @@ impl LoveLetterStreamOpener {
             },
             Ok(Some(message)) => {
                 println!("DEBUG: Received initial stream message: {:?}", message);
-                match message.data {
+                match message.proto_lv_le_in {
+                    Some(ProtoLvLeIn::Handshake(handshake)) => Ok(handshake),
                     None => {
                         println!("INFO: Stream initial message is missing data.");
                         Err(Status::new(Code::FailedPrecondition, "Expected data stream message to have data."))
                     }
-                    Some(data) => match data.payload_in {
-                        Some(PayloadIn::Handshake(handshake)) => Ok(handshake),
-                        _ => {
-                            println!("INFO: Stream initial message is not Handshake.");
-                            Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Handshake message."))
-                        },
+                    Some(_) => {
+                        println!("INFO: Stream initial message is not Handshake.");
+                        Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Handshake message."))
                     },
                 }
             },
         }
     }
+
+    fn validate_and_convert_handshake(&self, handshake: ProtoGameDataHandshake) -> Result<ClientInfo, Status> {
+        if handshake.game_type != ProtoGameType::LoveLetter as i32 {
+            println!("INFO: Invalid game type in Handshake message.");
+            return Err(Status::new(Code::FailedPrecondition, "Invalid game type in Handshake message."));
+        }
+
+        Ok(ClientInfo {
+            player_id: handshake.player_id,
+            game_id: handshake.game_id
+        })
+    }
+
+    fn register_stream_sender(&self, tx: mpsc::UnboundedSender<Result<ProtoLoveLetterDataOut, Status>>, client: ClientInfo) {
+        let stream_out_snd = StreamSender::new(tx);
+        self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
+            payload: LoveLetterEventType::RegisterDataStream(stream_out_snd),
+            client,
+        });
+    }
+
+    fn spawn_stream_driver_task(&self, stream_in: Streaming<ProtoLoveLetterDataIn>, client: ClientInfo) {
+        let handler = LoveLetterStreamMessageHandler {
+            game_repo_client: self.game_repo_client.unsized_clone(),
+            client,
+        };
+
+        let stream_driver = StreamDriver::new(stream_in, handler);
+        tokio::spawn(stream_driver.run());
+    }
 }
 
-struct LoveLetterStreamHandler {
+/// This struct is responsible for handling individual messages from the client stream.
+struct LoveLetterStreamMessageHandler {
     game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
     client: ClientInfo,
 }
 
-impl LoveLetterStreamHandler {
+impl LoveLetterStreamMessageHandler {
 
-    fn convert_and_send_message(&self, payload: PayloadIn) {
-        let event_type = match payload {
-            PayloadIn::Handshake(_) => {
+    fn convert_and_send_message(&self, payload: ProtoLvLeIn) {
+        if let Some(event_type) = self.convert_message(payload) {
+            self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
+                client: self.client.clone(),
+                payload: event_type
+            });
+        }
+    }
+
+    fn convert_message(&self, payload: ProtoLvLeIn) -> Option<LoveLetterEventType> {
+        match payload {
+            ProtoLvLeIn::Handshake(_) => {
                 println!("INFO: Client stream sent Handshake message after handshake is done.");
                 self.notify_client_invalid_message();
-                return;
+                None
             },
-            PayloadIn::GameState(_) => LoveLetterEventType::GetGameState,
+            ProtoLvLeIn::GameState(_) => Some(LoveLetterEventType::GetGameState),
             _ => {
                 // TODO TODONEXT start here
                 unimplemented!()
             }
-        };
-
-        self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
-            client: self.client.clone(),
-            payload: event_type
-        });
+        }
     }
 
     fn notify_client_invalid_message(&self) {
@@ -120,19 +131,15 @@ impl LoveLetterStreamHandler {
     }
 }
 
-impl StreamMessageHandler<ProtoLoveLetterDataIn> for LoveLetterStreamHandler {
+impl StreamMessageHandler<ProtoLoveLetterDataIn> for LoveLetterStreamMessageHandler {
 
     fn handle_message(&self, message: ProtoLoveLetterDataIn) {
-        match message.data {
+        match message.proto_lv_le_in {
             None => {
                 println!("INFO: Client sent data message with missing data_in.");
                 self.notify_client_invalid_message();
             },
-            Some(ProtoDataIn { payload_in: None }) => {
-                println!("INFO: Client sent data message with missing payload.");
-                self.notify_client_invalid_message();
-            },
-            Some(ProtoDataIn { payload_in: Some(payload) }) => {
+            Some(payload) => {
                 self.convert_and_send_message(payload)
             },
         }

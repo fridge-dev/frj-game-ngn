@@ -32,32 +32,28 @@ pub struct ProtoLoveLetterDataIn {
     #[prost(uint64, tag = "1")]
     pub clock: u64,
     /// The actual message
-    #[prost(message, optional, tag = "2")]
-    pub data: ::std::option::Option<proto_love_letter_data_in::ProtoDataIn>,
+    #[prost(
+        oneof = "proto_love_letter_data_in::ProtoLvLeIn",
+        tags = "2, 3, 4, 5, 6, 7"
+    )]
+    pub proto_lv_le_in: ::std::option::Option<proto_love_letter_data_in::ProtoLvLeIn>,
 }
 pub mod proto_love_letter_data_in {
-    /// It works?
-    #[derive(Clone, PartialEq, ::prost::Message)]
-    pub struct ProtoDataIn {
-        #[prost(oneof = "proto_data_in::PayloadIn", tags = "1, 2, 3, 4, 5, 6")]
-        pub payload_in: ::std::option::Option<proto_data_in::PayloadIn>,
-    }
-    pub mod proto_data_in {
-        #[derive(Clone, PartialEq, ::prost::Oneof)]
-        pub enum PayloadIn {
-            #[prost(message, tag = "1")]
-            Handshake(super::super::ProtoGameDataHandshake),
-            #[prost(message, tag = "2")]
-            GameState(super::super::ProtoGameDataStateReq),
-            #[prost(message, tag = "3")]
-            PlayCard(super::super::ProtoLvLePlayCardReq),
-            #[prost(message, tag = "4")]
-            SelectTargetPlayer(super::super::ProtoLvLeSelectTargetPlayer),
-            #[prost(message, tag = "5")]
-            SelectTargetCard(super::super::ProtoLvLeSelectTargetCard),
-            #[prost(message, tag = "6")]
-            CommitSelection(super::super::ProtoLvLeCommitSelectionReq),
-        }
+    /// The actual message
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum ProtoLvLeIn {
+        #[prost(message, tag = "2")]
+        Handshake(super::ProtoGameDataHandshake),
+        #[prost(message, tag = "3")]
+        GameState(super::ProtoGameDataStateReq),
+        #[prost(message, tag = "4")]
+        PlayCard(super::ProtoLvLePlayCardReq),
+        #[prost(message, tag = "5")]
+        SelectTargetPlayer(super::ProtoLvLeSelectTargetPlayer),
+        #[prost(message, tag = "6")]
+        SelectTargetCard(super::ProtoLvLeSelectTargetCard),
+        #[prost(message, tag = "7")]
+        CommitSelection(super::ProtoLvLeCommitSelectionReq),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -66,33 +62,30 @@ pub struct ProtoLoveLetterDataOut {
     #[prost(uint64, tag = "1")]
     pub clock: u64,
     /// The actual message
-    #[prost(message, optional, tag = "2")]
-    pub data: ::std::option::Option<proto_love_letter_data_out::ProtoDataOut>,
+    #[prost(
+        oneof = "proto_love_letter_data_out::ProtoLvLeOut",
+        tags = "2, 3, 4, 5, 6, 7, 8"
+    )]
+    pub proto_lv_le_out: ::std::option::Option<proto_love_letter_data_out::ProtoLvLeOut>,
 }
 pub mod proto_love_letter_data_out {
-    #[derive(Clone, PartialEq, ::prost::Message)]
-    pub struct ProtoDataOut {
-        #[prost(oneof = "proto_data_out::PayloadOut", tags = "1, 2, 3, 4, 5, 6, 7")]
-        pub payload_out: ::std::option::Option<proto_data_out::PayloadOut>,
-    }
-    pub mod proto_data_out {
-        #[derive(Clone, PartialEq, ::prost::Oneof)]
-        pub enum PayloadOut {
-            #[prost(message, tag = "1")]
-            GameState(super::super::ProtoLvLeGameState),
-            #[prost(message, tag = "2")]
-            TurnIndicator(super::super::ProtoLvLeTurnIndicatorRepl),
-            #[prost(message, tag = "3")]
-            PlayCard(super::super::ProtoLvLePlayCardRepl),
-            #[prost(message, tag = "4")]
-            StageCard(super::super::ProtoLvLeStageCardRepl),
-            #[prost(message, tag = "5")]
-            SelectTargetPlayer(super::super::ProtoLvLeSelectTargetPlayer),
-            #[prost(message, tag = "6")]
-            SelectTargetCard(super::super::ProtoLvLeSelectTargetCard),
-            #[prost(message, tag = "7")]
-            CommitSelection(super::super::ProtoLvLeCommitSelectionRepl),
-        }
+    /// The actual message
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum ProtoLvLeOut {
+        #[prost(message, tag = "2")]
+        GameState(super::ProtoLvLeGameState),
+        #[prost(message, tag = "3")]
+        TurnIndicator(super::ProtoLvLeTurnIndicatorRepl),
+        #[prost(message, tag = "4")]
+        PlayCard(super::ProtoLvLePlayCardRepl),
+        #[prost(message, tag = "5")]
+        StageCard(super::ProtoLvLeStageCardRepl),
+        #[prost(message, tag = "6")]
+        SelectTargetPlayer(super::ProtoLvLeSelectTargetPlayer),
+        #[prost(message, tag = "7")]
+        SelectTargetCard(super::ProtoLvLeSelectTargetCard),
+        #[prost(message, tag = "8")]
+        CommitSelection(super::ProtoLvLeCommitSelectionRepl),
     }
 }
 // =======================================
