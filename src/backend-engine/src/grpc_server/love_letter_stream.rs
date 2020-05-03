@@ -2,13 +2,14 @@ use crate::game_manager::api::GameRepositoryClient;
 use crate::grpc_server::frj_server::GameDataStream;
 use crate::grpc_server::stream_reader::StreamDriver;
 use crate::grpc_server::stream_reader::StreamMessageHandler;
+use backend_framework::common_types::ClientInfo;
 use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHandshake};
-use love_letter_backend::{LoveLetterEventType, LoveLetterEvent};
-use tonic::{Streaming, Status, Code};
-use tokio::sync::mpsc;
 use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::proto_data_in::PayloadIn;
-use backend_framework::common_types::ClientInfo;
+use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::ProtoDataIn;
+use love_letter_backend::{LoveLetterEventType, LoveLetterEvent};
+use tokio::sync::mpsc;
+use tonic::{Streaming, Status, Code};
 
 pub struct LoveLetterStreamOpener {
     game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
@@ -123,18 +124,16 @@ impl StreamMessageHandler<ProtoLoveLetterDataIn> for LoveLetterStreamHandler {
 
     fn handle_message(&self, message: ProtoLoveLetterDataIn) {
         match message.data {
-            Some(data) => match data.payload_in {
-                Some(payload_in) => {
-                    self.convert_and_send_message(payload_in);
-                },
-                None => {
-                    println!("INFO: Client sent data message with missing payload.");
-                    self.notify_client_invalid_message();
-                },
-            },
             None => {
                 println!("INFO: Client sent data message with missing data_in.");
                 self.notify_client_invalid_message();
+            },
+            Some(ProtoDataIn { payload_in: None }) => {
+                println!("INFO: Client sent data message with missing payload.");
+                self.notify_client_invalid_message();
+            },
+            Some(ProtoDataIn { payload_in: Some(payload) }) => {
+                self.convert_and_send_message(payload)
             },
         }
     }

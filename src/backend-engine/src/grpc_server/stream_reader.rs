@@ -1,5 +1,9 @@
 use tonic::Streaming;
 
+/// Drives a stream until completion by polling the stream in an event loop. If the number of
+/// concurrent stream grows to be extremely high (thousands), I can consider using tokio's
+/// [StreamMap](https://docs.rs/tokio/0.2.20/tokio/stream/struct.StreamMap.html) to have fewer
+/// tasks to schedule but each polled task does O(n) check to see if child streams are ready.
 pub struct StreamDriver<M, H> where H: StreamMessageHandler<M> {
     stream: Streaming<M>,
     message_handler: H,
