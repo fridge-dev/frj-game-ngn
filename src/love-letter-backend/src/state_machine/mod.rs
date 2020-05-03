@@ -1,6 +1,6 @@
 mod handler;
 
-use crate::{LoveLetterEventType, LoveLetterEvent};
+use crate::events::{LoveLetterEvent, LoveLetterEventType};
 use crate::types::{StagedPlay, GameData};
 use backend_framework::data_stream::PlayerDataStreams;
 use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;

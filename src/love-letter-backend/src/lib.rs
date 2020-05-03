@@ -1,15 +1,13 @@
-mod types;
-mod state_machine;
 mod deck;
+mod state_machine;
+mod types;
+mod type_converters;
+pub mod events;
 
-use crate::types::{Card, GameData};
+use crate::events::LoveLetterEvent;
 use crate::state_machine::{LoveLetterState, LoveLetterStateMachine};
-use backend_framework::common_types::ClientInfo;
+use crate::types::GameData;
 use backend_framework::holder::Holder;
-use backend_framework::streaming::StreamSender;
-use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
-
-// ================= Actor =================
 
 pub struct LoveLetterInstanceManager {
     state: Holder<LoveLetterState>,
@@ -30,32 +28,4 @@ impl LoveLetterInstanceManager {
         let to_state = self.state_machine.transition_state(from_state, event);
         self.state.put(to_state);
     }
-}
-
-// ================= Inputs =================
-
-#[derive(Debug)]
-pub struct LoveLetterEvent {
-    // TODO this unnecessarily leaks `game_id` into individual instance managers
-    pub client: ClientInfo,
-    pub payload: LoveLetterEventType,
-}
-
-#[derive(Debug)]
-pub enum LoveLetterEventType {
-    // Common
-    RegisterDataStream(StreamSender<ProtoLoveLetterDataOut>),
-    GetGameState,
-
-    // Game-specific
-    PlayCardStaged(PlayCardSource),
-    SelectTargetPlayer(String),
-    SelectTargetCard(Card),
-    PlayCardCommit,
-}
-
-#[derive(Debug)]
-pub enum PlayCardSource {
-    Hand,
-    TopDeck,
 }

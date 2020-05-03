@@ -4,9 +4,11 @@ use crate::grpc_server::stream_reader::StreamDriver;
 use crate::grpc_server::stream_reader::StreamMessageHandler;
 use backend_framework::common_types::ClientInfo;
 use backend_framework::streaming::StreamSender;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHandshake};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHandshake, ProtoLvLeCard};
 use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::ProtoLvLeIn;
-use love_letter_backend::{LoveLetterEventType, LoveLetterEvent};
+use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_play_card_req::ProtoLvLeCardSource;
+use love_letter_backend::events::{LoveLetterEventType, LoveLetterEvent, PlayCardSource, Card};
+use std::convert::TryFrom;
 use tokio::sync::mpsc;
 use tonic::{Streaming, Status, Code};
 
@@ -102,32 +104,51 @@ struct LoveLetterStreamMessageHandler {
 impl LoveLetterStreamMessageHandler {
 
     fn convert_and_send_message(&self, payload: ProtoLvLeIn) {
-        if let Some(event_type) = self.convert_message(payload) {
-            self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
-                client: self.client.clone(),
-                payload: event_type
-            });
+        match self.convert_message(payload) {
+            Err(status) => self.notify_client_invalid_message(status),
+            Ok(event_type) => {
+                let event = LoveLetterEvent {
+                    client: self.client.clone(),
+                    payload: event_type
+                };
+                self.game_repo_client.handle_event_love_letter(event);
+            },
         }
     }
 
-    fn convert_message(&self, payload: ProtoLvLeIn) -> Option<LoveLetterEventType> {
+    fn convert_message(&self, payload: ProtoLvLeIn) -> Result<LoveLetterEventType, Status> {
         match payload {
             ProtoLvLeIn::Handshake(_) => {
                 println!("INFO: Client stream sent Handshake message after handshake is done.");
-                self.notify_client_invalid_message();
-                None
+                Err(Status::failed_precondition("Client sent handshake twice."))
             },
-            ProtoLvLeIn::GameState(_) => Some(LoveLetterEventType::GetGameState),
-            _ => {
-                // TODO TODONEXT start here
-                unimplemented!()
-            }
+            ProtoLvLeIn::GameState(_) => Ok(LoveLetterEventType::GetGameState),
+            ProtoLvLeIn::PlayCard(req) => {
+                let proto_card_source = ProtoLvLeCardSource::try_from(req.card_source)?;
+                let card_source = PlayCardSource::try_from(proto_card_source)
+                    .map_err(|_| Status::invalid_argument("Unspecified ProtoLvLeCardSource"))?;
+                Ok(LoveLetterEventType::PlayCardStaged(card_source))
+            },
+            ProtoLvLeIn::SelectTargetPlayer(req) => {
+                Ok(LoveLetterEventType::SelectTargetPlayer(req.target_player_id))
+            },
+            ProtoLvLeIn::SelectTargetCard(req) => {
+                let proto_card = ProtoLvLeCard::try_from(req.target_card)?;
+                let card = Card::try_from(proto_card)
+                    .map_err(|_| Status::invalid_argument("Unspecified ProtoLvLeCard"))?;
+                Ok(LoveLetterEventType::SelectTargetCard(card))
+            },
+            ProtoLvLeIn::CommitSelection(_) => {
+                Ok(LoveLetterEventType::PlayCardCommit)
+            },
         }
     }
 
-    fn notify_client_invalid_message(&self) {
+    fn notify_client_invalid_message(&self, status: Status) {
         // TODO: notify client that `messageId` was invalid.
-        unimplemented!()
+        // Close stream? Drop message? Idk.
+        println!("Client sent invalid message to data stream. Sending err {:?}", status);
+        unimplemented!("TODO notify client of invalid message")
     }
 }
 
@@ -136,8 +157,7 @@ impl StreamMessageHandler<ProtoLoveLetterDataIn> for LoveLetterStreamMessageHand
     fn handle_message(&self, message: ProtoLoveLetterDataIn) {
         match message.proto_lv_le_in {
             None => {
-                println!("INFO: Client sent data message with missing data_in.");
-                self.notify_client_invalid_message();
+                self.notify_client_invalid_message(Status::invalid_argument("Missing proto_lv_le_in field."));
             },
             Some(payload) => {
                 self.convert_and_send_message(payload)

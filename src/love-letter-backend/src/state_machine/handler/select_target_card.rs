@@ -1,5 +1,5 @@
+use crate::events::Card;
 use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
-use crate::types::Card;
 
 impl LoveLetterStateMachineEventHandler {
 

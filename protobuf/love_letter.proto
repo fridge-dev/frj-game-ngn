@@ -78,9 +78,9 @@ message ProtoLvLeTurnIndicatorRepl {
 
 // Req: First action taken during a turn
 message ProtoLvLePlayCardReq {
-    CardSource card_source = 1;
+    ProtoLvLeCardSource card_source = 1;
 
-    enum CardSource {
+    enum ProtoLvLeCardSource {
         UNSPECIFIED_CARD_SOURCE = 0;
         HAND = 1;
         TOP_DECK = 2;

@@ -1,4 +1,4 @@
-use crate::types::Card;
+use crate::events::Card;
 use backend_framework::shuffler;
 
 pub fn new_shuffled_deck() -> Vec<Card> {

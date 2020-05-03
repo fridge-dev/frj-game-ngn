@@ -2,7 +2,7 @@ use crate::game_manager::types::GameIdentifier;
 use crate::lost_cities_placeholder::LostCitiesEvent;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoStartGameReply};
 use backend_framework::streaming::StreamSender;
-use love_letter_backend::LoveLetterEvent;
+use love_letter_backend::events::LoveLetterEvent;
 use tokio::sync::oneshot;
 use tonic::Status;
 

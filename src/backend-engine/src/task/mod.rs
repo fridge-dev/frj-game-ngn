@@ -6,7 +6,7 @@ use crate::lost_cities_placeholder::LostCitiesEvent;
 use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::ProtoPreGameMessage;
 use backend_framework::wire_api::proto_frj_ngn::ProtoStartGameReply;
-use love_letter_backend::LoveLetterEvent;
+use love_letter_backend::events::LoveLetterEvent;
 use tonic::Status;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;

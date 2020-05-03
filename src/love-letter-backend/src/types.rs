@@ -1,51 +1,6 @@
-use crate::{PlayCardSource, deck};
+use crate::deck;
+use crate::events::{PlayCardSource, Card};
 use std::collections::HashMap;
-
-/// Input:
-/// 1 - Guard    : `(String, Card)`
-/// 2 - Priest   : `(String)`
-/// 3 - Baron    : `(String)`
-/// 4 - Handmaid : `()`
-/// 5 - Prince   : `(String)`
-/// 6 - King     : `(String)`
-/// 7 - Countess : `()`
-/// 8 - Princess : `()`
-///
-/// Outcome:
-/// 1 - Guard    : `(bool)` - was guess correct
-/// 2 - Priest   : `()`
-/// 3 - Baron    : `(String, Card)` - the player+card that was knocked out
-/// 4 - Handmaid : `()`
-/// 5 - Prince   : `(Card)` - the discarded card
-/// 6 - King     : `(Card)` - new card received by each player
-/// 7 - Countess : `()`
-/// 8 - Princess : `()`
-#[derive(PartialEq, PartialOrd, Copy, Clone, Debug)]
-pub enum Card {
-    /// 1 - Guesses another player's card, if correct, other player is out. Can't guess Guard(1).
-    Guard,
-
-    /// 2 - See another player's card.
-    Priest,
-
-    /// 3 - Privately compare card with another player. Lower card is out.
-    Baron,
-
-    /// 4 - Self cannot be targeted until the next turn.
-    Handmaid,
-
-    /// 5 - Choose any player (including self) to discard their card and draw a new one.
-    Prince,
-
-    /// 6 - Trade hands with any other player.
-    King,
-
-    /// 7 - Must be discarded if other card is King(6) or Prince(5).
-    Countess,
-
-    /// 8 - If this card is ever discarded, that player is out.
-    Princess,
-}
 
 pub struct GameData {
     pub player_id_turn_order: Vec<String>,

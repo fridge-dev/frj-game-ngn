@@ -135,13 +135,16 @@ pub struct ProtoLvLeTurnIndicatorRepl {
 /// Req: First action taken during a turn
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLvLePlayCardReq {
-    #[prost(enumeration = "proto_lv_le_play_card_req::CardSource", tag = "1")]
+    #[prost(
+        enumeration = "proto_lv_le_play_card_req::ProtoLvLeCardSource",
+        tag = "1"
+    )]
     pub card_source: i32,
 }
 pub mod proto_lv_le_play_card_req {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
-    pub enum CardSource {
+    pub enum ProtoLvLeCardSource {
         UnspecifiedCardSource = 0,
         Hand = 1,
         TopDeck = 2,

@@ -53,4 +53,33 @@ mod enum_converters {
             ))
         }
     }
+
+    mod love_letter {
+        use crate::wire_api::proto_frj_ngn::proto_lv_le_play_card_req::ProtoLvLeCardSource;
+        use crate::wire_api::proto_frj_ngn::ProtoLvLeCard;
+        use std::convert::TryFrom;
+        use tonic::{Code, Status};
+
+        impl TryFrom<i32> for ProtoLvLeCardSource {
+            type Error = Status;
+
+            fn try_from(value: i32) -> Result<Self, Self::Error> {
+                ProtoLvLeCardSource::from_i32(value).ok_or(Status::new(
+                    Code::InvalidArgument,
+                    format!("Illegal CardSource i32 value '{}'", value),
+                ))
+            }
+        }
+
+        impl TryFrom<i32> for ProtoLvLeCard {
+            type Error = Status;
+
+            fn try_from(value: i32) -> Result<Self, Self::Error> {
+                ProtoLvLeCard::from_i32(value).ok_or(Status::new(
+                    Code::InvalidArgument,
+                    format!("Illegal LvLeCard i32 value '{}'", value),
+                ))
+            }
+        }
+    }
 }
