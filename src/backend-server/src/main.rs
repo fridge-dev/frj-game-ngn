@@ -7,13 +7,13 @@ use backend_framework::wire_api::proto_frj_ngn::proto_fridge_game_engine_server:
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli_args = cli::CliArgs::parse();
 
-    println!("Starting local server and dependencies.");
+    println!("INFO: Starting local server and dependencies.");
     let frj_server = FrjServer::start()?;
 
     let socket_address: SocketAddr = format!("[::]:{}", cli_args.port)
         .parse()
         .expect("This should never happen. It's a valid IP address, dammit.");
-    println!("Going to listen on '{:?}'", socket_address);
+    println!("INFO: Going to listen on '{:?}'", socket_address);
 
     Server::builder()
         .add_service(ProtoFridgeGameEngineServer::new(frj_server))

@@ -43,6 +43,7 @@ impl GameRepository for DefaultGameRepository {
     /// Idempotent-ly creates a new instance manager of a game.
     fn create_game(&mut self, game: GameIdentifier) {
         let game_type = game.game_type;
+        println!("INFO: Creating game {:?}", game);
         self.unstarted_games
             .entry(game)
             .or_insert_with(|| PreGameInstanceManager::new(game_type));
