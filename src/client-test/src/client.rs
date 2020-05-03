@@ -28,7 +28,7 @@ impl<T: prost::Message> LoggingStream<T> {
     pub async fn recv(&mut self) -> StreamMsg<T> {
         let message = self.inner.message().await;
 
-        println!("STREAM_IN [{}]: {:?}", self.player_id, message);
+        println!("STREAM_RECV [{}]: {:?}", self.player_id, message);
 
         match message {
             Ok(Some(msg)) => StreamMsg::Data(msg),

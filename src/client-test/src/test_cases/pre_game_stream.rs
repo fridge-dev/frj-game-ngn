@@ -3,15 +3,24 @@ use client_engine::wire_api::proto_frj_ngn::proto_pre_game_message::Inner;
 use crate::client::{LoggingGameClient, LoggingStream};
 use std::error::Error;
 
-pub async fn run(game_id: String) -> Result<(), Box<dyn Error>> {
-    // == setup ==
-    let p1 = "p1".to_string();
-    let p2 = "p2".to_string();
-    let p3 = "p3".to_string();
+pub struct PreGameStreamThreePlayersTestConfig {
+    pub game_id: String,
+    pub game_type: ProtoGameType,
+    pub players: [String; 3],
+}
+
+pub async fn run(config: PreGameStreamThreePlayersTestConfig) -> Result<(), Box<dyn Error>> {
+    // -- setup --
+    let game_id = config.game_id;
+    let game_type = config.game_type as i32;
+    let p1 = config.players[0].to_owned();
+    let p2 = config.players[1].to_owned();
+    let p3 = config.players[2].to_owned();
+
+    // -- connect --
     let mut client1 = LoggingGameClient::new(&p1).await.expect("connect1");
-    let mut client2 = LoggingGameClient::new(&p2).await.expect("connect1");
-    let mut client3 = LoggingGameClient::new(&p3).await.expect("connect1");
-    let game_type = ProtoGameType::LoveLetter as i32;
+    let mut client2 = LoggingGameClient::new(&p2).await.expect("connect2");
+    let mut client3 = LoggingGameClient::new(&p3).await.expect("connect3");
 
     // -- p1 create new game --
     let mut p1_stream = client1.host_game(ProtoHostGameReq {
@@ -105,11 +114,8 @@ pub async fn run(game_id: String) -> Result<(), Box<dyn Error>> {
     // -- verify stream closure --
 
     p1_stream.recv_closed("p1_stream").await;
-    println!("Player 1 server closed stream.");
     p2_stream.recv_closed("p2_stream").await;
-    println!("Player 2 server closed stream.");
     p3_stream.recv_closed("p3_stream").await;
-    println!("Player 3 server closed stream.");
 
     Ok(())
 }
