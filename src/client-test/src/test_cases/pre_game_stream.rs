@@ -1,15 +1,19 @@
+use crate::client::{LoggingGameClient, LoggingStreamRecv};
 use client_engine::wire_api::proto_frj_ngn::{ProtoHostGameReq, ProtoGameType, ProtoPreGameMessage, ProtoJoinGameReq, ProtoStartGameReq};
 use client_engine::wire_api::proto_frj_ngn::proto_pre_game_message::Inner;
-use crate::client::{LoggingGameClient, LoggingStream};
 use std::error::Error;
+use std::collections::HashMap;
 
-pub struct PreGameStreamThreePlayersTestConfig {
+pub struct Config {
     pub game_id: String,
     pub game_type: ProtoGameType,
     pub players: [String; 3],
+
+    /// So other tests can provide the connection.
+    pub client_conns: HashMap<String, LoggingGameClient>,
 }
 
-pub async fn run(config: PreGameStreamThreePlayersTestConfig) -> Result<(), Box<dyn Error>> {
+pub async fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
     // -- setup --
     let game_id = config.game_id;
     let game_type = config.game_type as i32;
@@ -18,9 +22,18 @@ pub async fn run(config: PreGameStreamThreePlayersTestConfig) -> Result<(), Box<
     let p3 = config.players[2].to_owned();
 
     // -- connect --
-    let mut client1 = LoggingGameClient::new(&p1).await.expect("connect1");
-    let mut client2 = LoggingGameClient::new(&p2).await.expect("connect2");
-    let mut client3 = LoggingGameClient::new(&p3).await.expect("connect3");
+    let mut client1 = match config.client_conns.remove(&p1) {
+        Some(client) => client,
+        None => LoggingGameClient::new(&p1).await.expect("connect1"),
+    };
+    let mut client2 = match config.client_conns.remove(&p2) {
+        Some(client) => client,
+        None => LoggingGameClient::new(&p2).await.expect("connect2"),
+    };
+    let mut client3 = match config.client_conns.remove(&p3) {
+        Some(client) => client,
+        None => LoggingGameClient::new(&p3).await.expect("connect3"),
+    };
 
     // -- p1 create new game --
     let mut p1_stream = client1.host_game(ProtoHostGameReq {
@@ -121,7 +134,7 @@ pub async fn run(config: PreGameStreamThreePlayersTestConfig) -> Result<(), Box<
 }
 
 async fn get_next_message(
-    stream: &mut LoggingStream<ProtoPreGameMessage>,
+    stream: &mut LoggingStreamRecv<ProtoPreGameMessage>,
     stream_name: &'static str
 ) -> Inner {
     stream.recv_data(stream_name)

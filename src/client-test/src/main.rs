@@ -1,28 +1,49 @@
-use client_test::test_cases::pre_game_stream;
-use std::error::Error;
-use client_test::test_cases::pre_game_stream::PreGameStreamThreePlayersTestConfig;
 use client_engine::wire_api::proto_frj_ngn::ProtoGameType;
+use client_test::test_cases::{pre_game_stream, love_letter_happy_path};
+use std::error::Error;
+use std::collections::HashMap;
 
 /// I implemented my own (very simple) test execution framework because **I want to see stdout**
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let config = PreGameStreamThreePlayersTestConfig {
+    let config = pre_game_stream::Config {
         game_id: game_id(),
         game_type: ProtoGameType::LoveLetter,
         players: ["p1".to_string(), "p2".to_string(), "p3".to_string()],
+        client_conns: HashMap::new(),
     };
-    pre_game_stream::run(config).await?;
-    success("pre_game_stream");
+    pass_fail("pre_game_stream", pre_game_stream::run(config).await);
+
+    let config = love_letter_happy_path::Config {
+        game_id: game_id(),
+        players: [player_id(), player_id(), player_id()],
+    };
+    pass_fail("love_letter_happy_path", love_letter_happy_path::run(config).await);
 
     Ok(())
 }
 
 fn game_id() -> String {
-    format!("{:x}", rand::random::<u64>())
+    format!("game-id-{:x}", rand::random::<u32>())
 }
 
-fn success(test_name: &'static str) {
-    println!();
-    println!("GREEN: {}", test_name);
-    println!();
+fn player_id() -> String {
+    format!("player-id-{:x}", rand::random::<u32>())
+}
+
+fn pass_fail(test_name: &'static str, result: Result<(), Box<dyn Error>>) {
+    match result {
+        Ok(_) => {
+            println!();
+            println!("PASSED: {}", test_name);
+            println!();
+        },
+        Err(error) => {
+            println!();
+            println!("FAILED: {}", test_name);
+            println!("Err Display='{}', Debug: {:?}", error, error);
+            println!();
+            panic!("Test failure");
+        },
+    }
 }

@@ -1,13 +1,17 @@
 pub mod wrapper {
-    use crate::wire_api::proto_frj_ngn::{ProtoHostGameReq, ProtoJoinGameReq, ProtoStartGameReq, ProtoStartGameReply, ProtoPreGameMessage};
+    use crate::wire_api::proto_frj_ngn::{ProtoHostGameReq, ProtoJoinGameReq, ProtoStartGameReq, ProtoStartGameReply, ProtoPreGameMessage, ProtoLoveLetterDataIn, ProtoLoveLetterDataOut};
     use crate::wire_api::proto_frj_ngn::proto_fridge_game_engine_client::ProtoFridgeGameEngineClient;
     use std::error::Error;
+    use tokio::sync::mpsc;
     use tonic::transport::{Channel, Endpoint};
     use tonic::{Status, Streaming};
 
+    #[derive(Clone)]
     pub struct GameClient {
         inner_client: ProtoFridgeGameEngineClient<Channel>
     }
+
+    type DataStream<I, O> = (mpsc::UnboundedSender<I>, Streaming<O>);
 
     impl GameClient {
 
@@ -43,6 +47,15 @@ pub mod wrapper {
                 .start_game(req)
                 .await
                 .map(|response| response.into_inner())
+        }
+
+        pub async fn open_love_letter_stream(&mut self) -> Result<DataStream<ProtoLoveLetterDataIn, ProtoLoveLetterDataOut>, Status> {
+            let (snd, rcv) = mpsc::unbounded_channel();
+
+            self.inner_client
+                .open_love_letter_data_stream(rcv)
+                .await
+                .map(|response| (snd, response.into_inner()))
         }
     }
 }
