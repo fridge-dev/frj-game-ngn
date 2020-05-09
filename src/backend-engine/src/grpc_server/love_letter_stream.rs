@@ -75,11 +75,7 @@ async fn wait_for_handshake_message(stream_in_recv: &mut Streaming<ProtoLoveLett
             Err(Status::new(Code::FailedPrecondition, "Read empty message from stream upon opening."))
         },
         Ok(Some(message)) => {
-            println!(
-                "DEBUG: ({}) LoveLetterStreamInitializer Received initial stream message: {:?}",
-                chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.6f"), // TODO remove?
-                message,
-            );
+            println!("DEBUG: LoveLetterStreamInitializer Received initial stream message: {:?}", message);
             match message.proto_lv_le_in {
                 Some(ProtoLvLeIn::Handshake(handshake)) => Ok(handshake),
                 None => {
@@ -100,7 +96,7 @@ fn spawn_stream_driver_task(
     stream_in: Streaming<ProtoLoveLetterDataIn>,
     client: ClientInfo
 ) {
-    let stream_id = format!("{}--{}", client.game_id, client.player_id);
+    let stream_id = format!("{}:{}", client.game_id, client.player_id);
     let handler = LoveLetterStreamMessageHandler {
         game_repo_client,
         client,
