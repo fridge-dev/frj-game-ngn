@@ -6,21 +6,16 @@ use backend_framework::streaming::MessageErrType;
 impl LoveLetterStateMachineEventHandler {
 
     pub fn play_card_staged(
-        &mut self,
+        &self,
         from_state: LoveLetterState,
         player_id: String,
         card_source: PlayCardSource
     ) -> LoveLetterState {
-        if !self.players.contains(&player_id) {
-            // TODO notify caller of err?
-            return from_state;
-        }
-
         match from_state {
             LoveLetterState::InProgressStaged(game_data, staged_play) => {
                 // Is my turn
                 if &player_id != game_data.current_player_turn() {
-                    self.players.send_err(&player_id, "Can't play card, not your turn", MessageErrType::InvalidReq);
+                    self.streams.send_err(&player_id, "Can't play card, not your turn", MessageErrType::InvalidReq);
                     return LoveLetterState::InProgressStaged(game_data, staged_play)
                 }
 
@@ -31,7 +26,7 @@ impl LoveLetterStateMachineEventHandler {
                     // Or send player some type of message telling
                     // them to re-get state
                 } else {
-                    self.players.send_err(&player_id, "Can't play card while pending commit", MessageErrType::InvalidReq);
+                    self.streams.send_err(&player_id, "Can't play card while pending commit", MessageErrType::InvalidReq);
                 }
 
                 // No state change
@@ -39,7 +34,7 @@ impl LoveLetterStateMachineEventHandler {
             },
             LoveLetterState::InProgress(game_data) => {
                 if game_data.current_player_turn() != &player_id {
-                    self.players.send_err(&player_id, "Can't play card, not your turn", MessageErrType::InvalidReq);
+                    self.streams.send_err(&player_id, "Can't play card, not your turn", MessageErrType::InvalidReq);
 
                     // No state change
                     return LoveLetterState::InProgress(game_data);

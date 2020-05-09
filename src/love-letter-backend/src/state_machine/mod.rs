@@ -43,7 +43,7 @@ impl LoveLetterStateMachine {
                 from_state
             },
             LoveLetterEventType::RegisterDataStream(stream_out) => {
-                self.handler.players.add_stream(player_id, stream_out);
+                self.handler.streams.add_stream(player_id, stream_out);
                 from_state
             },
             LoveLetterEventType::PlayCardStaged(card_source) => {
@@ -63,13 +63,13 @@ impl LoveLetterStateMachine {
 }
 
 struct LoveLetterStateMachineEventHandler {
-    players: PlayerDataStreams<ProtoLoveLetterDataOut>,
+    streams: PlayerDataStreams<ProtoLoveLetterDataOut>,
 }
 
 impl LoveLetterStateMachineEventHandler {
     pub fn new(player_ids: Vec<String>) -> Self {
         LoveLetterStateMachineEventHandler {
-            players: PlayerDataStreams::new(player_ids)
+            streams: PlayerDataStreams::new(player_ids)
         }
     }
 }

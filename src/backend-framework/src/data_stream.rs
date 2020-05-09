@@ -1,10 +1,14 @@
-use crate::data_stream::immutable::PlayerIds;
 use crate::streaming::{StreamSender, MessageErrType};
 use tonic::Status;
 use std::collections::HashMap;
 
+/// Struct for sending data-stream messages to players; used only once a game has been started.
+///
+/// Game logic should NOT:
+/// * use this struct to determine which player IDs are in a game (game state should track this)
+/// * react to stream disconnects/reconnects
 pub struct PlayerDataStreams<M: prost::Message> {
-    player_ids: PlayerIds,
+    allowed_player_ids: immutable::PlayerIds,
     streams: HashMap<String, StreamSender<M>>,
 }
 
@@ -12,18 +16,13 @@ impl<M: prost::Message> PlayerDataStreams<M> {
 
     pub fn new(player_ids: Vec<String>) -> Self {
         PlayerDataStreams {
-            player_ids: PlayerIds::new(player_ids),
+            allowed_player_ids: immutable::PlayerIds::new(player_ids),
             streams: HashMap::new(),
         }
     }
 
-    pub fn contains(&self, player_id: &String) -> bool {
-        self.player_ids.contains(player_id)
-    }
-
     pub fn add_stream(&mut self, player_id: String, stream: StreamSender<M>) {
-        if self.player_ids.contains(&player_id) {
-            // Idempotent reconnect
+        if self.allowed_player_ids.contains(&player_id) {
             self.streams.insert(player_id, stream);
         } else {
             stream.disconnect_with_err(Status::permission_denied("You are not a player in this game."));
