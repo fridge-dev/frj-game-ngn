@@ -24,11 +24,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn game_id() -> String {
-    format!("game-id-{:x}", rand::random::<u32>())
+    format!("g-{:x}", rand::random::<u32>())
 }
 
 fn player_id() -> String {
-    format!("player-id-{:x}", rand::random::<u32>())
+    format!("p-{:x}", rand::random::<u32>())
 }
 
 fn pass_fail(test_name: &'static str, result: Result<(), Box<dyn Error>>) {

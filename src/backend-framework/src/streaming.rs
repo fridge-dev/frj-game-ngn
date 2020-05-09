@@ -138,6 +138,7 @@ impl<M: prost::Message> Debug for StreamSender<M> {
 pub enum MessageErrType {
     ServerFault,
     InvalidReq,
+    NotFound,
 }
 
 impl From<MessageErrType> for Code {
@@ -145,6 +146,7 @@ impl From<MessageErrType> for Code {
         match err_type {
             MessageErrType::ServerFault => Code::Internal,
             MessageErrType::InvalidReq => Code::InvalidArgument,
+            MessageErrType::NotFound => Code::NotFound,
         }
     }
 }

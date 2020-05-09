@@ -2,10 +2,10 @@ use crate::game_manager::api::GameRepository;
 use crate::game_manager::pre_game::PreGameInstanceManager;
 use crate::game_manager::types::{GameIdentifier, GameType};
 use crate::lost_cities_placeholder::{LostCitiesInstanceManager, LostCitiesEvent};
-use backend_framework::streaming::StreamSender;
+use backend_framework::streaming::{StreamSender, MessageErrType};
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoStartGameReply};
 use love_letter_backend::LoveLetterInstanceManager;
-use love_letter_backend::events::LoveLetterEvent;
+use love_letter_backend::events::{LoveLetterEvent, LoveLetterEventType};
 use std::collections::HashMap;
 use tokio::sync::oneshot;
 use tonic::Status;
@@ -57,6 +57,7 @@ impl GameRepository for DefaultGameRepository {
                 // TODO notify caller of NotFound
             },
             Some(pre_game_instance_manager) => {
+                println!("INFO: Player '{}' joining game '{}'", player_id, game.game_id);
                 pre_game_instance_manager.add_player(player_id, stream_out);
             },
         }
@@ -91,14 +92,27 @@ impl GameRepository for DefaultGameRepository {
     }
 
     fn notify_game_state(&mut self, _player_id: String, _game: GameIdentifier) {
-        unimplemented!()
+        unimplemented!("DefaultGameRepository::notify_game_state()")
     }
 
-    fn handle_event_love_letter(&mut self, _event: LoveLetterEvent) {
-        unimplemented!()
+    fn handle_event_love_letter(&mut self, event: LoveLetterEvent) {
+        println!("DEBUG: DefaultGameRepository received {:?}", event);
+
+        if let Some(game) = self.love_letter_instances.get_mut(&event.client_info.game_id) {
+            // TODO this unnecessarily leaks `game_id` into individual instance managers
+            game.handle_event(event);
+        } else if let LoveLetterEventType::RegisterDataStream(stream) = event.payload {
+            let _ = stream.send_error_message(
+                format!("Game {} not found", event.client_info.game_id),
+                MessageErrType::NotFound
+            );
+        } else {
+            // Can't notify client of game not found (because of how I modeled the code).
+            // Should probably fix this at some point...
+        }
     }
 
     fn handle_event_lost_cities(&mut self, _event: LostCitiesEvent) {
-        unimplemented!()
+        unimplemented!("DefaultGameRepository::handle_event_lost_cities()")
     }
 }

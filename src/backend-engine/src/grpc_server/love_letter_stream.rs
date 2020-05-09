@@ -4,7 +4,7 @@ use crate::grpc_server::stream_reader::StreamDriver;
 use crate::grpc_server::stream_reader::StreamMessageHandler;
 use backend_framework::common_types::ClientInfo;
 use backend_framework::streaming::StreamSender;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameType, ProtoGameDataHandshake, ProtoLvLeCard};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLoveLetterDataIn, ProtoLoveLetterDataOut, ProtoGameDataHandshake, ProtoLvLeCard};
 use backend_framework::wire_api::proto_frj_ngn::proto_love_letter_data_in::ProtoLvLeIn;
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_play_card_req::ProtoLvLeCardSource;
 use love_letter_backend::events::{LoveLetterEventType, LoveLetterEvent, PlayCardSource, Card};
@@ -13,86 +13,101 @@ use tokio::sync::mpsc;
 use tonic::{Streaming, Status, Code};
 
 /// This struct is responsible for handling newly opened streams to the backend.
-pub struct LoveLetterStreamHandler {
+pub struct LoveLetterStreamInitializer {
     game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
 }
 
-impl LoveLetterStreamHandler {
+impl LoveLetterStreamInitializer {
 
     pub fn new(game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>) -> Self {
-        LoveLetterStreamHandler {
+        LoveLetterStreamInitializer {
             game_repo_client
         }
     }
 
     /// This method is called when the server receives a request to open a LoveLetter data stream.
-    pub async fn handle_new_stream(&self, mut stream_in_rcv: Streaming<ProtoLoveLetterDataIn>) -> Result<GameDataStream<ProtoLoveLetterDataOut>, Status> {
-        let handshake = self.wait_for_handshake_message(&mut stream_in_rcv).await?;
-        let client_info = self.validate_and_convert_handshake(handshake)?;
-
-        self.spawn_stream_driver_task(stream_in_rcv, client_info.clone());
-
+    pub async fn handle_new_stream(&self, stream_in_rcv: Streaming<ProtoLoveLetterDataIn>) -> Result<GameDataStream<ProtoLoveLetterDataOut>, Status> {
         let (tx, rx) = mpsc::unbounded_channel();
-        self.register_stream_sender(tx, client_info);
+        let game_repo_client = self.game_repo_client.unsized_clone();
+
+        tokio::spawn(Self::initialize_bi_stream_processors(game_repo_client, tx, stream_in_rcv));
+
         Ok(rx)
     }
 
-    async fn wait_for_handshake_message(&self, stream_in_recv: &mut Streaming<ProtoLoveLetterDataIn>) -> Result<ProtoGameDataHandshake, Status> {
-        match stream_in_recv.message().await {
-            Err(status) => {
-                println!("WARN: Received Status err when expected Handshake. Err: {:?}", status);
-                Err(Status::new(Code::FailedPrecondition, "Failed to read message from stream upon opening."))
+    // Here, we have the 2 "server" halves of a bidirectional stream.
+    async fn initialize_bi_stream_processors(
+        game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
+        stream_out: mpsc::UnboundedSender<Result<ProtoLoveLetterDataOut, Status>>,
+        mut stream_in: Streaming<ProtoLoveLetterDataIn>,
+    ) {
+        // 1. Poll receiver for handshake
+        let handshake_result = wait_for_handshake_message(&mut stream_in).await;
+        let handshake = match handshake_result {
+            Ok(handshake) => handshake,
+            Err(e) => {
+                let _ = stream_out.send(Err(e));
+                return;
             },
-            Ok(None) => {
-                println!("INFO: Stream closed as soon as it was opened. wtf!");
-                Err(Status::new(Code::FailedPrecondition, "Read empty message from stream upon opening."))
-            },
-            Ok(Some(message)) => {
-                println!("DEBUG: Received initial stream message: {:?}", message);
-                match message.proto_lv_le_in {
-                    Some(ProtoLvLeIn::Handshake(handshake)) => Ok(handshake),
-                    None => {
-                        println!("INFO: Stream initial message is missing data.");
-                        Err(Status::new(Code::FailedPrecondition, "Expected data stream message to have data."))
-                    }
-                    Some(_) => {
-                        println!("INFO: Stream initial message is not Handshake.");
-                        Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Handshake message."))
-                    },
-                }
-            },
-        }
-    }
-
-    fn validate_and_convert_handshake(&self, handshake: ProtoGameDataHandshake) -> Result<ClientInfo, Status> {
-        if handshake.game_type != ProtoGameType::LoveLetter as i32 {
-            println!("INFO: Invalid game type in Handshake message.");
-            return Err(Status::new(Code::FailedPrecondition, "Invalid game type in Handshake message."));
-        }
-
-        Ok(ClientInfo {
-            player_id: handshake.player_id,
-            game_id: handshake.game_id
-        })
-    }
-
-    fn register_stream_sender(&self, tx: mpsc::UnboundedSender<Result<ProtoLoveLetterDataOut, Status>>, client: ClientInfo) {
-        let stream_out_snd = StreamSender::new(tx);
-        self.game_repo_client.handle_event_love_letter(LoveLetterEvent {
-            payload: LoveLetterEventType::RegisterDataStream(stream_out_snd),
-            client,
-        });
-    }
-
-    fn spawn_stream_driver_task(&self, stream_in: Streaming<ProtoLoveLetterDataIn>, client: ClientInfo) {
-        let handler = LoveLetterStreamMessageHandler {
-            game_repo_client: self.game_repo_client.unsized_clone(),
-            client,
         };
+        let client_info = ClientInfo::from(handshake);
 
-        let stream_driver = StreamDriver::new(stream_in, handler);
-        tokio::spawn(stream_driver.run());
+        // 2. Register sender to backend
+        let payload = LoveLetterEventType::RegisterDataStream(StreamSender::new(stream_out));
+        game_repo_client.handle_event_love_letter(LoveLetterEvent {
+            payload,
+            client_info: client_info.clone(),
+        });
+
+        // 3. Spawn task to poll receiver
+        spawn_stream_driver_task(game_repo_client, stream_in, client_info);
     }
+}
+
+async fn wait_for_handshake_message(stream_in_recv: &mut Streaming<ProtoLoveLetterDataIn>) -> Result<ProtoGameDataHandshake, Status> {
+    match stream_in_recv.message().await {
+        Err(status) => {
+            println!("WARN: LoveLetterStreamInitializer Received Status err when expected Handshake. Err: {:?}", status);
+            Err(Status::new(Code::FailedPrecondition, "Failed to read message from stream upon opening."))
+        },
+        Ok(None) => {
+            println!("INFO: LoveLetterStreamInitializer Stream closed as soon as it was opened. wtf!");
+            Err(Status::new(Code::FailedPrecondition, "Read empty message from stream upon opening."))
+        },
+        Ok(Some(message)) => {
+            println!(
+                "DEBUG: ({}) LoveLetterStreamInitializer Received initial stream message: {:?}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.6f"), // TODO remove?
+                message,
+            );
+            match message.proto_lv_le_in {
+                Some(ProtoLvLeIn::Handshake(handshake)) => Ok(handshake),
+                None => {
+                    println!("INFO: LoveLetterStreamInitializer Stream initial message is missing data.");
+                    Err(Status::new(Code::FailedPrecondition, "Expected data stream message to have data."))
+                }
+                Some(_) => {
+                    println!("INFO: LoveLetterStreamInitializer Stream initial message is not Handshake.");
+                    Err(Status::new(Code::FailedPrecondition, "Expected first stream message to be Handshake message."))
+                },
+            }
+        },
+    }
+}
+
+fn spawn_stream_driver_task(
+    game_repo_client: Box<dyn GameRepositoryClient + Send + Sync>,
+    stream_in: Streaming<ProtoLoveLetterDataIn>,
+    client: ClientInfo
+) {
+    let stream_id = format!("{}--{}", client.game_id, client.player_id);
+    let handler = LoveLetterStreamMessageHandler {
+        game_repo_client,
+        client,
+    };
+
+    let stream_driver = StreamDriver::new(stream_id, stream_in, handler);
+    tokio::spawn(stream_driver.run());
 }
 
 /// This struct is responsible for handling individual messages from the client stream.
@@ -108,7 +123,7 @@ impl LoveLetterStreamMessageHandler {
             Err(status) => self.notify_client_invalid_message(status),
             Ok(event_type) => {
                 let event = LoveLetterEvent {
-                    client: self.client.clone(),
+                    client_info: self.client.clone(),
                     payload: event_type
                 };
                 self.game_repo_client.handle_event_love_letter(event);

@@ -35,7 +35,7 @@ impl LoveLetterStateMachine {
         from_state: LoveLetterState,
         event: LoveLetterEvent,
     ) -> LoveLetterState {
-        let player_id = event.client.player_id;
+        let player_id = event.client_info.player_id;
 
         match event.payload {
             LoveLetterEventType::GetGameState => {

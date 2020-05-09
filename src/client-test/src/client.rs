@@ -2,9 +2,14 @@ use client_engine::game_client::wrapper::GameClient;
 use client_engine::wire_api::proto_frj_ngn::{ProtoHostGameReq, ProtoJoinGameReq, ProtoStartGameReq, ProtoStartGameReply, ProtoPreGameMessage, ProtoLoveLetterDataIn, ProtoLoveLetterDataOut};
 use client_engine::wire_api::proto_frj_ngn::proto_love_letter_data_in::ProtoLvLeIn;
 use std::error::Error;
-use std::fmt::Debug;
+use std::fmt;
+use std::fmt::{Debug, Formatter};
 use tokio::sync::mpsc;
 use tonic::{Status, Streaming};
+
+fn time() -> String {
+    format!("{}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.6f"))
+}
 
 // ------- LoggingStreamRecv --------
 
@@ -30,7 +35,7 @@ impl<T: prost::Message> LoggingStreamRecv<T> {
     pub async fn recv(&mut self) -> StreamMsg<T> {
         let message = self.inner.message().await;
 
-        println!("STREAM_RECV [{}]: {:?}", self.player_id, message);
+        println!("STREAM_RECV ({}) [{}]: {:?}", time(), self.player_id, message);
 
         match message {
             Ok(Some(msg)) => StreamMsg::Data(msg),
@@ -77,6 +82,12 @@ impl<T: prost::Message> LoggingStreamRecv<T> {
     }
 }
 
+impl<T: prost::Message> Debug for LoggingStreamRecv<T> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "LoggingStreamRecv")
+    }
+}
+
 // ------- LoggingStreamSender --------
 
 pub struct LoggingStreamSender<T: prost::Message> {
@@ -93,9 +104,15 @@ impl<T: prost::Message> LoggingStreamSender<T> {
     }
 
     pub fn send(&self, message: T) -> Result<(), ()> {
-        println!("STREAM_SEND [{}]: {:?}", self.player_id, message);
+        println!("STREAM_SEND ({}) [{}]: {:?}", time(), self.player_id, message);
         self.inner.send(message)
             .map_err(|_| ())
+    }
+}
+
+impl<T: prost::Message> Debug for LoggingStreamSender<T> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "LoggingStreamSender")
     }
 }
 
@@ -155,18 +172,17 @@ impl LoggingGameClient {
     > {
         self.log_request(&"OpenLoveLetterDataStream");
         let result = self.inner.open_love_letter_stream().await;
-        self.log_result(result)
-            .map(|(snd, rcv)| (self.make_stream_sender(snd), self.make_stream_recv(rcv)))
+        self.log_result(result.map(|(snd, rcv)| (self.make_stream_sender(snd), self.make_stream_recv(rcv))))
     }
 
     fn log_request<I: Debug>(&self, req: &I) {
-        println!("REQUEST [{}]: {:?}", &self.player_id, req);
+        println!("REQUEST ({}) [{}]: {:?}", time(), &self.player_id, req);
     }
 
     fn log_result<O: Debug, E: Debug>(&self, result: Result<O, E>) -> Result<O, E> {
         match &result {
-            Ok(response) => println!("RESPONSE [{}]: {:?}", &self.player_id, response),
-            Err(status) => println!("ERROR [{}]: {:?}", &self.player_id, status),
+            Ok(response) => println!("RESPONSE ({}) [{}]: {:?}", time(), &self.player_id, response),
+            Err(status) => println!("ERROR ({}) [{}]: {:?}", time(), &self.player_id, status),
         }
 
         result

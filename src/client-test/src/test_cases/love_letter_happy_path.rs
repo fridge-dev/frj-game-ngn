@@ -1,11 +1,9 @@
 use crate::client::LoggingGameClient;
 use crate::test_cases::pre_game_stream;
-use client_engine::wire_api::proto_frj_ngn::{ProtoGameType, ProtoGameDataHandshake, ProtoHostGameReq};
+use client_engine::wire_api::proto_frj_ngn::{ProtoGameType, ProtoGameDataHandshake};
 use client_engine::wire_api::proto_frj_ngn::proto_love_letter_data_in::ProtoLvLeIn;
 use std::collections::HashMap;
 use std::error::Error;
-use tokio::sync::mpsc;
-use tonic::Request;
 
 pub struct Config {
     pub game_id: String,
@@ -43,17 +41,20 @@ pub async fn run(config: Config) -> Result<(), Box<dyn Error>> {
         game_type: ProtoGameType::LoveLetter as i32,
     }));
     snd2.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
-        player_id: p1.clone(),
+        player_id: p2.clone(),
         game_id: game_id.clone(),
         game_type: ProtoGameType::LoveLetter as i32,
     }));
     snd3.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
-        player_id: p1.clone(),
+        player_id: p3.clone(),
         game_id: game_id.clone(),
         game_type: ProtoGameType::LoveLetter as i32,
     }));
 
     // TODO implement full game
+    let _ = rcv1.recv_data("p1 msg1").await;
+    let _ = rcv2.recv_data("p2 msg1").await;
+    let _ = rcv3.recv_data("p3 msg1").await;
 
     Ok(())
 }

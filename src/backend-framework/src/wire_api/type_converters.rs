@@ -83,3 +83,23 @@ mod enum_converters {
         }
     }
 }
+
+/// Non-enum and non-oneof converters
+mod normal_converters {
+    use crate::wire_api::proto_frj_ngn::{ProtoGameDataHandshake, ProtoGameType};
+    use crate::common_types::ClientInfo;
+
+    impl From<ProtoGameDataHandshake> for ClientInfo {
+        fn from(handshake: ProtoGameDataHandshake) -> Self {
+            if handshake.game_type != ProtoGameType::LoveLetter as i32 {
+                println!("INFO: Invalid game type in Handshake message. Panicking because this is a dead branch that will be deleted soon.");
+                panic!("TODO clean this up");
+            }
+
+            ClientInfo {
+                player_id: handshake.player_id,
+                game_id: handshake.game_id
+            }
+        }
+    }
+}
