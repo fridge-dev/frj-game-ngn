@@ -29,12 +29,12 @@ pub enum PlayCardSource {
 }
 
 /// Input:
-/// 1 - Guard    : `(String, Card)`
-/// 2 - Priest   : `(String)`
-/// 3 - Baron    : `(String)`
+/// 1 - Guard    : `(String, Card)` - the player+card that is guessed
+/// 2 - Priest   : `(String)` - player to view card
+/// 3 - Baron    : `(String)` - player to compare with
 /// 4 - Handmaid : `()`
-/// 5 - Prince   : `(String)`
-/// 6 - King     : `(String)`
+/// 5 - Prince   : `(String)` - player to discard/replace their card
+/// 6 - King     : `(String)` - player to swap with
 /// 7 - Countess : `()`
 /// 8 - Princess : `()`
 ///

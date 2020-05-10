@@ -11,7 +11,7 @@ package proto_frj_ngn;
 
 message ProtoLoveLetterDataIn {
 
-    // Logical clock for this game instance
+    // Logical clock for this game instance, provided for OCC if game needs it.
     uint64 clock = 1;
 
     // The actual message
@@ -27,7 +27,7 @@ message ProtoLoveLetterDataIn {
 
 message ProtoLoveLetterDataOut {
 
-    // Logical clock for this game instance
+    // Logical clock for this game instance, provided for OCC if game needs it.
     uint64 clock = 1;
 
     // The actual message
@@ -50,17 +50,35 @@ message ProtoLoveLetterDataOut {
 
 message ProtoLvLeGameState {
 
-    // Logical clock for this game instance
     uint64 clock = 1;
-    repeated ProtoLvLePlayerState players = 2;
-    ProtoLvLeCard my_card = 3;
-    string current_turn_player_id = 4;
-    repeated ProtoLvLeCard play_history = 5;
+    repeated ProtoLvLePlayer players = 2;
+    oneof stage {
+        ProtoLvLeRoundState round_in_progress = 3;
+        ProtoLvLeResultState round_intermission = 4;
+    }
 
-    message ProtoLvLePlayerState {
+    // -- nested message types
+
+    message ProtoLvLePlayer {
         string player_id = 1;
-        bool in_play = 2;
-        uint32 round_wins = 3;
+        uint32 round_wins = 2;
+    }
+
+    message ProtoLvLeRoundState {
+        repeated string remaining_player_ids = 1;
+        ProtoLvLeCard my_hand = 2;
+        oneof turn {
+            ProtoLvLeCard my_drawn_card = 3;
+            uint32 remaining_player_turn_index = 4;
+        }
+        ProtoLvLeCardSelection staged_play = 5;
+        ProtoLvLeCommittedPlay most_recent_committed_play = 6;
+        repeated ProtoLvLeCard play_history = 7;
+    }
+
+    message ProtoLvLeResultState {
+        // Sparse map, missing value => player eliminated
+        map<string, ProtoLvLeCard> final_cards = 1;
     }
 }
 
@@ -129,17 +147,56 @@ message ProtoLvLeCommitSelectionRepl {
 
 enum ProtoLvLeCard {
     UNSPECIFIED_LOVE_LETTER_CARD = 0;
-    GUARD = 1;
-    PRIEST = 2;
-    BARON = 3;
-    HANDMAID = 4;
-    PRINCE = 5;
-    KING = 6;
-    COUNTESS = 7;
-    PRINCESS = 8;
+    GUARD = 1; // Guesses another player's card, if correct, other player is out. Can't guess Guard(1).
+    PRIEST = 2; // See another player's card.
+    BARON = 3; // Privately compare card with another player. Lower card is out.
+    HANDMAID = 4; // Self cannot be targeted until the next turn.
+    PRINCE = 5; // Choose any player (including self) to discard their card and draw a new one.
+    KING = 6; // Trade hands with any other player.
+    COUNTESS = 7; // Must be discarded if other card is King(6) or Prince(5).
+    PRINCESS = 8; // If this card is ever discarded, that player is out.
 }
 
-// Output data of effect:
+// Input selection for card:
+// 1 - Guard    : `(String, Card)` - the player+card that is guessed
+// 2 - Priest   : `(String)` - player to view card
+// 3 - Baron    : `(String)` - player to compare with
+// 4 - Handmaid : `()`
+// 5 - Prince   : `(String)` - player to discard/replace their card
+// 6 - King     : `(String)` - player to swap with
+// 7 - Countess : `()`
+// 8 - Princess : `()`
+message ProtoLvLeCardSelection {
+    // Set to null for 4,7,8
+    reserved 4, 7, 8;
+
+    oneof inner {
+        ProtoGuardSelection guard = 1;
+        ProtoPriestSelection priest = 2;
+        ProtoBaronSelection baron = 3;
+        ProtoPrinceSelection prince = 5;
+        ProtoKingSelection king = 6;
+    }
+
+    message ProtoGuardSelection {
+        string opt_player_id = 1;
+        ProtoLvLeCard opt_card = 2;
+    }
+    message ProtoPriestSelection {
+        string opt_player_id = 1;
+    }
+    message ProtoBaronSelection {
+        string opt_player_id = 1;
+    }
+    message ProtoPrinceSelection {
+        string opt_player_id = 1;
+    }
+    message ProtoKingSelection {
+        string opt_player_id = 1;
+    }
+}
+
+// Publicly broadcasted data after playing a card:
 // 1 - Guard    : `(bool)` - was guess correct
 // 2 - Priest   : `()`
 // 3 - Baron    : `(String, Card)` - the player+card that was knocked out
@@ -149,12 +206,12 @@ enum ProtoLvLeCard {
 // 7 - Countess : `()`
 // 8 - Princess : `()`
 message ProtoLvLeCardOutcome {
-    // Set to null for 2,4,7,8
+    // Set to null for 2,4,6,7,8
+    reserved 2, 4, 6, 7, 8;
     oneof inner {
         ProtoGuardOutcome guard = 1;
         ProtoBaronOutcome baron = 3;
         ProtoPrinceOutcome prince = 5;
-        ProtoKingOutcome king = 6;
     }
 
     message ProtoGuardOutcome {
@@ -167,7 +224,9 @@ message ProtoLvLeCardOutcome {
     message ProtoPrinceOutcome {
         ProtoLvLeCard discarded_card = 1;
     }
-    message ProtoKingOutcome {
-        ProtoLvLeCard new_card = 1;
-    }
+}
+
+message ProtoLvLeCommittedPlay {
+    ProtoLvLeCardSelection selection = 1;
+    ProtoLvLeCardOutcome outcome = 2;
 }

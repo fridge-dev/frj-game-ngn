@@ -1,11 +1,13 @@
 /// Wrappers of the `oneof` message type in protobuf.
 mod oneof_wrappers {
-    use crate::wire_api::proto_frj_ngn::{proto_pre_game_message, ProtoLoveLetterDataOut, ProtoLvLeGameState};
+    use crate::wire_api::proto_frj_ngn::proto_love_letter_data_out::ProtoLvLeOut;
     use crate::wire_api::proto_frj_ngn::proto_pre_game_message::{
         ProtoGameStartMsg, ProtoJoinGameAck, ProtoPlayerJoinMsg,
     };
     use crate::wire_api::proto_frj_ngn::ProtoPreGameMessage;
-    use crate::wire_api::proto_frj_ngn::proto_love_letter_data_out::ProtoLvLeOut;
+    use crate::wire_api::proto_frj_ngn::{
+        proto_pre_game_message, ProtoLoveLetterDataOut, ProtoLvLeGameState,
+    };
 
     impl From<ProtoJoinGameAck> for ProtoPreGameMessage {
         fn from(msg: ProtoJoinGameAck) -> Self {
@@ -35,7 +37,7 @@ mod oneof_wrappers {
         fn from(game_state: ProtoLvLeGameState) -> Self {
             ProtoLoveLetterDataOut {
                 clock: 0,
-                proto_lv_le_out: Some(ProtoLvLeOut::GameState(game_state))
+                proto_lv_le_out: Some(ProtoLvLeOut::GameState(game_state)),
             }
         }
     }
@@ -96,8 +98,8 @@ mod enum_converters {
 
 /// Non-enum and non-oneof converters
 mod normal_converters {
-    use crate::wire_api::proto_frj_ngn::{ProtoGameDataHandshake, ProtoGameType};
     use crate::common_types::ClientInfo;
+    use crate::wire_api::proto_frj_ngn::{ProtoGameDataHandshake, ProtoGameType};
 
     impl From<ProtoGameDataHandshake> for ClientInfo {
         fn from(handshake: ProtoGameDataHandshake) -> Self {
@@ -108,7 +110,7 @@ mod normal_converters {
 
             ClientInfo {
                 player_id: handshake.player_id,
-                game_id: handshake.game_id
+                game_id: handshake.game_id,
             }
         }
     }

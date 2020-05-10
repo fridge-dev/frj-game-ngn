@@ -28,7 +28,7 @@ pub enum ProtoGameType {
 
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLoveLetterDataIn {
-    /// Logical clock for this game instance
+    /// Logical clock for this game instance, provided for OCC if game needs it.
     #[prost(uint64, tag = "1")]
     pub clock: u64,
     /// The actual message
@@ -58,7 +58,7 @@ pub mod proto_love_letter_data_in {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLoveLetterDataOut {
-    /// Logical clock for this game instance
+    /// Logical clock for this game instance, provided for OCC if game needs it.
     #[prost(uint64, tag = "1")]
     pub clock: u64,
     /// The actual message
@@ -96,27 +96,59 @@ pub mod proto_love_letter_data_out {
 
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLvLeGameState {
-    /// Logical clock for this game instance
     #[prost(uint64, tag = "1")]
     pub clock: u64,
     #[prost(message, repeated, tag = "2")]
-    pub players: ::std::vec::Vec<proto_lv_le_game_state::ProtoLvLePlayerState>,
-    #[prost(enumeration = "ProtoLvLeCard", tag = "3")]
-    pub my_card: i32,
-    #[prost(string, tag = "4")]
-    pub current_turn_player_id: std::string::String,
-    #[prost(enumeration = "ProtoLvLeCard", repeated, tag = "5")]
-    pub play_history: ::std::vec::Vec<i32>,
+    pub players: ::std::vec::Vec<proto_lv_le_game_state::ProtoLvLePlayer>,
+    #[prost(oneof = "proto_lv_le_game_state::Stage", tags = "3, 4")]
+    pub stage: ::std::option::Option<proto_lv_le_game_state::Stage>,
 }
 pub mod proto_lv_le_game_state {
+    // -- nested message types
+
     #[derive(Clone, PartialEq, ::prost::Message)]
-    pub struct ProtoLvLePlayerState {
+    pub struct ProtoLvLePlayer {
         #[prost(string, tag = "1")]
         pub player_id: std::string::String,
-        #[prost(bool, tag = "2")]
-        pub in_play: bool,
-        #[prost(uint32, tag = "3")]
+        #[prost(uint32, tag = "2")]
         pub round_wins: u32,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoLvLeRoundState {
+        #[prost(string, repeated, tag = "1")]
+        pub remaining_player_ids: ::std::vec::Vec<std::string::String>,
+        #[prost(enumeration = "super::ProtoLvLeCard", tag = "2")]
+        pub my_hand: i32,
+        #[prost(message, optional, tag = "5")]
+        pub staged_play: ::std::option::Option<super::ProtoLvLeCardSelection>,
+        #[prost(message, optional, tag = "6")]
+        pub most_recent_committed_play: ::std::option::Option<super::ProtoLvLeCommittedPlay>,
+        #[prost(enumeration = "super::ProtoLvLeCard", repeated, tag = "7")]
+        pub play_history: ::std::vec::Vec<i32>,
+        #[prost(oneof = "proto_lv_le_round_state::Turn", tags = "3, 4")]
+        pub turn: ::std::option::Option<proto_lv_le_round_state::Turn>,
+    }
+    pub mod proto_lv_le_round_state {
+        #[derive(Clone, PartialEq, ::prost::Oneof)]
+        pub enum Turn {
+            #[prost(enumeration = "super::super::ProtoLvLeCard", tag = "3")]
+            MyDrawnCard(i32),
+            #[prost(uint32, tag = "4")]
+            RemainingPlayerTurnIndex(u32),
+        }
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoLvLeResultState {
+        /// Sparse map, missing value => player eliminated
+        #[prost(map = "string, enumeration(super::ProtoLvLeCard)", tag = "1")]
+        pub final_cards: ::std::collections::HashMap<std::string::String, i32>,
+    }
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Stage {
+        #[prost(message, tag = "3")]
+        RoundInProgress(ProtoLvLeRoundState),
+        #[prost(message, tag = "4")]
+        RoundIntermission(ProtoLvLeResultState),
     }
 }
 // --- TurnIndicator
@@ -192,7 +224,63 @@ pub struct ProtoLvLeCommitSelectionRepl {
     #[prost(message, optional, tag = "1")]
     pub outcome: ::std::option::Option<ProtoLvLeCardOutcome>,
 }
-/// Output data of effect:
+/// Input selection for card:
+/// 1 - Guard    : `(String, Card)` - the player+card that is guessed
+/// 2 - Priest   : `(String)` - player to view card
+/// 3 - Baron    : `(String)` - player to compare with
+/// 4 - Handmaid : `()`
+/// 5 - Prince   : `(String)` - player to discard/replace their card
+/// 6 - King     : `(String)` - player to swap with
+/// 7 - Countess : `()`
+/// 8 - Princess : `()`
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoLvLeCardSelection {
+    #[prost(oneof = "proto_lv_le_card_selection::Inner", tags = "1, 2, 3, 5, 6")]
+    pub inner: ::std::option::Option<proto_lv_le_card_selection::Inner>,
+}
+pub mod proto_lv_le_card_selection {
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoGuardSelection {
+        #[prost(string, tag = "1")]
+        pub opt_player_id: std::string::String,
+        #[prost(enumeration = "super::ProtoLvLeCard", tag = "2")]
+        pub opt_card: i32,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoPriestSelection {
+        #[prost(string, tag = "1")]
+        pub opt_player_id: std::string::String,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoBaronSelection {
+        #[prost(string, tag = "1")]
+        pub opt_player_id: std::string::String,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoPrinceSelection {
+        #[prost(string, tag = "1")]
+        pub opt_player_id: std::string::String,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoKingSelection {
+        #[prost(string, tag = "1")]
+        pub opt_player_id: std::string::String,
+    }
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Inner {
+        #[prost(message, tag = "1")]
+        Guard(ProtoGuardSelection),
+        #[prost(message, tag = "2")]
+        Priest(ProtoPriestSelection),
+        #[prost(message, tag = "3")]
+        Baron(ProtoBaronSelection),
+        #[prost(message, tag = "5")]
+        Prince(ProtoPrinceSelection),
+        #[prost(message, tag = "6")]
+        King(ProtoKingSelection),
+    }
+}
+/// Publicly broadcasted data after playing a card:
 /// 1 - Guard    : `(bool)` - was guess correct
 /// 2 - Priest   : `()`
 /// 3 - Baron    : `(String, Card)` - the player+card that was knocked out
@@ -203,8 +291,7 @@ pub struct ProtoLvLeCommitSelectionRepl {
 /// 8 - Princess : `()`
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLvLeCardOutcome {
-    /// Set to null for 2,4,7,8
-    #[prost(oneof = "proto_lv_le_card_outcome::Inner", tags = "1, 3, 5, 6")]
+    #[prost(oneof = "proto_lv_le_card_outcome::Inner", tags = "1, 3, 5")]
     pub inner: ::std::option::Option<proto_lv_le_card_outcome::Inner>,
 }
 pub mod proto_lv_le_card_outcome {
@@ -225,12 +312,6 @@ pub mod proto_lv_le_card_outcome {
         #[prost(enumeration = "super::ProtoLvLeCard", tag = "1")]
         pub discarded_card: i32,
     }
-    #[derive(Clone, PartialEq, ::prost::Message)]
-    pub struct ProtoKingOutcome {
-        #[prost(enumeration = "super::ProtoLvLeCard", tag = "1")]
-        pub new_card: i32,
-    }
-    /// Set to null for 2,4,7,8
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Inner {
         #[prost(message, tag = "1")]
@@ -239,9 +320,14 @@ pub mod proto_lv_le_card_outcome {
         Baron(ProtoBaronOutcome),
         #[prost(message, tag = "5")]
         Prince(ProtoPrinceOutcome),
-        #[prost(message, tag = "6")]
-        King(ProtoKingOutcome),
     }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoLvLeCommittedPlay {
+    #[prost(message, optional, tag = "1")]
+    pub selection: ::std::option::Option<ProtoLvLeCardSelection>,
+    #[prost(message, optional, tag = "2")]
+    pub outcome: ::std::option::Option<ProtoLvLeCardOutcome>,
 }
 // =======================================
 // Common sub types
@@ -251,13 +337,21 @@ pub mod proto_lv_le_card_outcome {
 #[repr(i32)]
 pub enum ProtoLvLeCard {
     UnspecifiedLoveLetterCard = 0,
+    /// Guesses another player's card, if correct, other player is out. Can't guess Guard(1).
     Guard = 1,
+    /// See another player's card.
     Priest = 2,
+    /// Privately compare card with another player. Lower card is out.
     Baron = 3,
+    /// Self cannot be targeted until the next turn.
     Handmaid = 4,
+    /// Choose any player (including self) to discard their card and draw a new one.
     Prince = 5,
+    /// Trade hands with any other player.
     King = 6,
+    /// Must be discarded if other card is King(6) or Prince(5).
     Countess = 7,
+    /// If this card is ever discarded, that player is out.
     Princess = 8,
 }
 // ======================================================

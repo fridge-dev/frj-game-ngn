@@ -1,8 +1,8 @@
 use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
 use crate::types::GameData;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard};
-use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::ProtoLvLePlayerState;
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, proto_lv_le_game_state};
 use tonic::Status;
+use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer};
 
 impl LoveLetterStateMachineEventHandler {
     pub fn send_game_state(&self, state: &LoveLetterState, player_id: String) {
@@ -16,63 +16,72 @@ impl LoveLetterStateMachineEventHandler {
 // TODO Internal state and API state have inconsistent (disjoint) data model. Needs thoughtful review and refactor.
 fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvLeGameState, Status> {
     let (
-        players,
-        opt_my_card,
-        current_turn_player_id,
+        proto_game_players,
+        proto_round_players,
+        opt_my_hand,
     ) = match state {
         LoveLetterState::InProgress(data) => convert_game_data(data, player_id),
         LoveLetterState::InProgressStaged(data, _staged) => convert_game_data(data, player_id),
     }?;
 
-    let my_card = opt_my_card
+    let my_hand = opt_my_hand
         .map(|c| c as i32)
         .unwrap_or(0);
 
+    let round_state = ProtoLvLeRoundState {
+        remaining_player_ids: proto_round_players,
+        my_hand,
+        staged_play: None,
+        most_recent_committed_play: None,
+        play_history: vec![],
+        turn: None
+    };
+
     Ok(ProtoLvLeGameState {
         clock: 0,
-        players,
-        my_card,
-        current_turn_player_id,
-        play_history: vec![],
+        players: proto_game_players,
+        stage: Some(proto_lv_le_game_state::Stage::RoundInProgress(round_state)),
     })
 }
 
 type ConvertGameDataResult = Result<
     (
-        Vec<ProtoLvLePlayerState>,
+        Vec<ProtoLvLePlayer>,
+        Vec<String>,
         Option<ProtoLvLeCard>,
-        String,
     ),
     Status
 >;
 
 fn convert_game_data(data: &GameData, my_player_id: &String) -> ConvertGameDataResult {
-    let mut proto_players = Vec::with_capacity(data.player_id_turn_order.len());
-    let mut opt_my_card: Option<ProtoLvLeCard> = None;
+    let num_players = data.player_id_turn_order.len();
+    let mut proto_game_players: Vec<ProtoLvLePlayer> = Vec::with_capacity(num_players);
+    let mut proto_round_players: Vec<String> = Vec::with_capacity(num_players);
+    let mut opt_my_hand: Option<ProtoLvLeCard> = None;
 
     for player_id in data.player_id_turn_order.iter() {
-        let opt_player_card = data.current_round.player_cards.get(player_id);
-
-        if my_player_id == player_id {
-            opt_my_card = opt_player_card.map(|c| ProtoLvLeCard::from(*c));
-        }
-
-        let proto_player_state = ProtoLvLePlayerState {
+        // Game state
+        let proto_player_state = ProtoLvLePlayer {
             player_id: player_id.to_string(),
-            in_play: opt_player_card.is_some(),
             round_wins: 0,
         };
-        proto_players.push(proto_player_state);
+        proto_game_players.push(proto_player_state);
+
+        // Round state
+        let opt_player_card = data.current_round.player_cards.get(player_id);
+        if opt_player_card.is_some() {
+            proto_round_players.push(player_id.to_string());
+        }
+
+        // My state
+        if my_player_id == player_id {
+            opt_my_hand = opt_player_card.map(|c| ProtoLvLeCard::from(*c));
+        }
     }
 
-    let current_turn_player_id = data.player_id_turn_order
-        .get(data.current_round.turn_cursor)
-        .ok_or_else(|| Status::internal("Internal bug when determining player turn"))?
-        .to_string();
-
     Ok((
-        proto_players,
-        opt_my_card,
-        current_turn_player_id,
+        proto_game_players,
+        proto_round_players,
+        opt_my_hand,
     ))
 }

@@ -63,6 +63,7 @@ pub mod cached_code_generation {
 
         println!("Reading contents of {}", source_file_path);
         let source_file_contents = read_file_contents(&mut source_file)?;
+        // TODO also hash entire directory of `source_file_path`
 
         println!("Hashing contents of {}", source_file_path);
         let computed_hashed = hash(&source_file_contents);
