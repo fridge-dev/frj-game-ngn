@@ -2,7 +2,7 @@ use crate::game_manager::api::GameRepository;
 use crate::game_manager::pre_game::PreGameInstanceManager;
 use crate::game_manager::types::{GameIdentifier, GameType};
 use crate::lost_cities_placeholder::{LostCitiesInstanceManager, LostCitiesEvent};
-use backend_framework::streaming::{StreamSender, MessageErrType};
+use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoStartGameReply};
 use love_letter_backend::LoveLetterInstanceManager;
 use love_letter_backend::events::{LoveLetterEvent, LoveLetterEventType};
@@ -102,10 +102,7 @@ impl GameRepository for DefaultGameRepository {
             // TODO this unnecessarily leaks `game_id` into individual instance managers
             game.handle_event(event);
         } else if let LoveLetterEventType::RegisterDataStream(stream) = event.payload {
-            let _ = stream.send_error_message(
-                format!("Game {} not found", event.client_info.game_id),
-                MessageErrType::NotFound
-            );
+            let _ = stream.send_error_message(Status::not_found(format!("Game {} not found", event.client_info.game_id)));
         } else {
             // Can't notify client of game not found (because of how I modeled the code).
             // Should probably fix this at some point...

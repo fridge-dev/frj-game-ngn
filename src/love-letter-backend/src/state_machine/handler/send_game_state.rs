@@ -1,32 +1,27 @@
 use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
 use crate::types::GameData;
-use backend_framework::streaming::MessageErrType;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard};
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::ProtoLvLePlayerState;
+use tonic::Status;
 
 impl LoveLetterStateMachineEventHandler {
     pub fn send_game_state(&self, state: &LoveLetterState, player_id: String) {
         match convert_state(state, &player_id) {
             Ok(proto_state) => self.streams.send_msg(&player_id, proto_state),
-            Err((msg, e)) => self.streams.send_err(&player_id, msg, e),
+            Err(status) => self.streams.send_err(&player_id, status),
         }
     }
 }
 
 // TODO Internal state and API state have inconsistent (disjoint) data model. Needs thoughtful review and refactor.
-//
-fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvLeGameState, (String, MessageErrType)> {
+fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvLeGameState, Status> {
     let (
         players,
         opt_my_card,
         current_turn_player_id,
     ) = match state {
-        LoveLetterState::InProgress(data) => {
-            convert_game_data(data, player_id)
-        },
-        LoveLetterState::InProgressStaged(data, staged) => {
-            convert_game_data(data, player_id)
-        },
+        LoveLetterState::InProgress(data) => convert_game_data(data, player_id),
+        LoveLetterState::InProgressStaged(data, _staged) => convert_game_data(data, player_id),
     }?;
 
     let my_card = opt_my_card
@@ -42,18 +37,13 @@ fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvL
     })
 }
 
-// TODO error modeling is getting yucky. Should soon figure out how to best model this. Maybe this
-// is a premature optimization and I should just use Status.
 type ConvertGameDataResult = Result<
     (
         Vec<ProtoLvLePlayerState>,
         Option<ProtoLvLeCard>,
         String,
     ),
-    (
-        String,
-        MessageErrType,
-    )
+    Status
 >;
 
 fn convert_game_data(data: &GameData, my_player_id: &String) -> ConvertGameDataResult {
@@ -77,7 +67,7 @@ fn convert_game_data(data: &GameData, my_player_id: &String) -> ConvertGameDataR
 
     let current_turn_player_id = data.player_id_turn_order
         .get(data.current_round.turn_cursor)
-        .ok_or_else(|| ("Internal bug when determining player turn".to_string(), MessageErrType::ServerFault))?
+        .ok_or_else(|| Status::internal("Internal bug when determining player turn"))?
         .to_string();
 
     Ok((

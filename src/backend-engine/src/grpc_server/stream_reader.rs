@@ -48,10 +48,11 @@ impl<M, H> StreamDriver<M, H> where H: StreamMessageHandler<M> {
         loop {
             match self.stream.message().await {
                 Err(status) => {
-                    self.log_err(&status);
                     if is_stream_done(&status) {
+                        self.log_err("INFO", &status);
                         break;
                     }
+                    self.log_err("ERROR", &status);
                 },
                 Ok(None) => {
                     self.log_close();
@@ -67,9 +68,10 @@ impl<M, H> StreamDriver<M, H> where H: StreamMessageHandler<M> {
         println!("INFO: StreamDriver [{}] exiting event loop", self.stream_id);
     }
 
-    fn log_err(&self, status: &Status) {
+    fn log_err(&self, level: &'static str, status: &Status) {
         println!(
-            "ERROR: ({}) StreamDriver [{}] received Status err: {:?}",
+            "{}: ({}) StreamDriver [{}] received Status err: {:?}",
+            level,
             chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.6f"),
             self.stream_id,
             status

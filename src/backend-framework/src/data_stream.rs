@@ -1,4 +1,4 @@
-use crate::streaming::{StreamSender, MessageErrType};
+use crate::streaming::StreamSender;
 use tonic::Status;
 use std::collections::HashMap;
 
@@ -41,9 +41,9 @@ impl<M: prost::Message> PlayerDataStreams<M> {
     /// Intentionally avoiding to update state when a disconnected stream is detected
     /// because it results in a cascading `mut` up the call chain, that's otherwise not
     /// required.
-    pub fn send_err(&self, player_id: &String, message: impl Into<String>, err_type: MessageErrType) {
+    pub fn send_err(&self, player_id: &String, status: Status) {
         if let Some(stream) = self.streams.get(player_id) {
-            let _ = stream.send_error_message(message.into(), err_type);
+            let _ = stream.send_error_message(status);
         }
     }
 }

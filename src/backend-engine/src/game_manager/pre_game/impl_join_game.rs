@@ -1,7 +1,8 @@
 use crate::game_manager::pre_game::PreGameInstanceManager;
-use backend_framework::streaming::{StreamSender, MessageErrType};
+use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoGameType};
 use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::{ProtoJoinGameAck, ProtoPlayerJoinMsg};
+use tonic::Status;
 
 impl PreGameInstanceManager {
 
@@ -18,7 +19,7 @@ impl PreGameInstanceManager {
 
         // Check max players
         if self.players.count() >= self.max_players {
-            if let Err(_) = client_stream.send_error_message("Can't join, game has max players".into(), MessageErrType::InvalidReq) {
+            if let Err(_) = client_stream.send_error_message(Status::failed_precondition("Can't join, game has max players")) {
                 println!("INFO: Client dropped before we sent join rejection response.");
             }
             return;
