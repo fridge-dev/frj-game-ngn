@@ -1,10 +1,11 @@
 /// Wrappers of the `oneof` message type in protobuf.
 mod oneof_wrappers {
-    use crate::wire_api::proto_frj_ngn::proto_pre_game_message;
+    use crate::wire_api::proto_frj_ngn::{proto_pre_game_message, ProtoLoveLetterDataOut, ProtoLvLeGameState};
     use crate::wire_api::proto_frj_ngn::proto_pre_game_message::{
         ProtoGameStartMsg, ProtoJoinGameAck, ProtoPlayerJoinMsg,
     };
     use crate::wire_api::proto_frj_ngn::ProtoPreGameMessage;
+    use crate::wire_api::proto_frj_ngn::proto_love_letter_data_out::ProtoLvLeOut;
 
     impl From<ProtoJoinGameAck> for ProtoPreGameMessage {
         fn from(msg: ProtoJoinGameAck) -> Self {
@@ -26,6 +27,15 @@ mod oneof_wrappers {
         fn from(msg: ProtoGameStartMsg) -> Self {
             ProtoPreGameMessage {
                 inner: Some(proto_pre_game_message::Inner::GameStartMsg(msg)),
+            }
+        }
+    }
+
+    impl From<ProtoLvLeGameState> for ProtoLoveLetterDataOut {
+        fn from(game_state: ProtoLvLeGameState) -> Self {
+            ProtoLoveLetterDataOut {
+                clock: 0,
+                proto_lv_le_out: Some(ProtoLvLeOut::GameState(game_state))
             }
         }
     }

@@ -32,3 +32,18 @@ impl TryFrom<ProtoLvLeCard> for Card {
         }
     }
 }
+
+impl From<Card> for ProtoLvLeCard {
+    fn from(card: Card) -> Self {
+        match card {
+            Card::Guard => ProtoLvLeCard::Guard,
+            Card::Priest => ProtoLvLeCard::Priest,
+            Card::Baron => ProtoLvLeCard::Baron,
+            Card::Handmaid => ProtoLvLeCard::Handmaid,
+            Card::Prince => ProtoLvLeCard::Prince,
+            Card::King => ProtoLvLeCard::King,
+            Card::Countess => ProtoLvLeCard::Countess,
+            Card::Princess => ProtoLvLeCard::Princess,
+        }
+    }
+}
