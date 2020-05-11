@@ -9,6 +9,9 @@ use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
 pub enum LoveLetterState {
     InProgress(GameData),
     InProgressStaged(GameData, StagedPlay),
+    // TODO TurnIntermission(GameData),
+    // TODO RoundIntermission(GameData),
+    // TODO GameComplete(GameResult),
 }
 
 /// A state machine executor. It operates on states as inputs/outputs, not owned data.

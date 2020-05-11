@@ -22,7 +22,7 @@ pub enum LoveLetterEventType {
     PlayCardCommit,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum PlayCardSource {
     Hand,
     TopDeck,
@@ -44,7 +44,7 @@ pub enum PlayCardSource {
 /// 3 - Baron    : `(String, Card)` - the player+card that was knocked out
 /// 4 - Handmaid : `()`
 /// 5 - Prince   : `(Card)` - the discarded card
-/// 6 - King     : `(Card)` - new card received by each player
+/// 6 - King     : `()`
 /// 7 - Countess : `()`
 /// 8 - Princess : `()`
 #[derive(PartialEq, PartialOrd, Copy, Clone, Debug)]

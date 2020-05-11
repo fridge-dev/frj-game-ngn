@@ -68,14 +68,14 @@ fn convert_game_data(data: &GameData, my_player_id: &String) -> ConvertGameDataR
         proto_game_players.push(proto_player_state);
 
         // Round state
-        let opt_player_card = data.current_round.player_cards.get(player_id);
+        let opt_player_card = data.current_round.players.get_card(player_id);
         if opt_player_card.is_some() {
             proto_round_players.push(player_id.to_string());
         }
 
         // My state
         if my_player_id == player_id {
-            opt_my_hand = opt_player_card.map(|c| ProtoLvLeCard::from(*c));
+            opt_my_hand = opt_player_card.map(|c| ProtoLvLeCard::from(c));
         }
     }
 
