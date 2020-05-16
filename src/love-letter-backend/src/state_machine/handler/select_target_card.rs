@@ -11,11 +11,17 @@ impl LoveLetterStateMachineEventHandler {
     ) -> LoveLetterState {
         // TODO being lazy, fill out full match statement... Only happy path for now
         match from_state {
-            LoveLetterState::InProgress(_) => from_state,
-            LoveLetterState::InProgressStaged(game_data, mut staged_play) => {
+            LoveLetterState::PlayPending(_) => from_state,
+            LoveLetterState::PlayStaging(game_data, mut staged_play) => {
                 staged_play.set_target_card(target_card);
-                LoveLetterState::InProgressStaged(game_data, staged_play)
-            },
+                LoveLetterState::PlayStaging(game_data, staged_play)
+            }
+            LoveLetterState::TurnIntermission(_) => {
+                unimplemented!("LoveLetterStateMachineEventHandler.select_target_card(TurnIntermission)");
+            }
+            LoveLetterState::RoundIntermission(_) => {
+                unimplemented!("LoveLetterStateMachineEventHandler.select_target_card(RoundIntermission)");
+            }
         }
     }
 

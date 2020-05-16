@@ -10,11 +10,19 @@ impl LoveLetterStateMachineEventHandler {
         player_id: String
     ) -> LoveLetterState {
         match from_state {
-            LoveLetterState::InProgress(game_data) => {
+            LoveLetterState::PlayPending(game_data) => {
                 // TODO if selection not-needed, auto-commit
-                LoveLetterState::InProgress(game_data)
+                LoveLetterState::PlayPending(game_data)
             },
-            LoveLetterState::InProgressStaged(mut game_data, staged_play) => {
+            LoveLetterState::TurnIntermission(game_data) => {
+                // TODO inform caller of bad request
+                LoveLetterState::TurnIntermission(game_data)
+            },
+            LoveLetterState::RoundIntermission(game_data) => {
+                // TODO inform caller of bad request
+                LoveLetterState::RoundIntermission(game_data)
+            },
+            LoveLetterState::PlayStaging(mut game_data, staged_play) => {
                 let mut player_to_eliminate = PlayerToEliminate::none();
 
                 // Perform action
@@ -95,7 +103,7 @@ impl LoveLetterStateMachineEventHandler {
                     },
                 }
 
-                LoveLetterState::InProgress(game_data)
+                LoveLetterState::PlayPending(game_data)
             },
         }
     }

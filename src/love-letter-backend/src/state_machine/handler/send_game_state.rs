@@ -13,15 +13,16 @@ impl LoveLetterStateMachineEventHandler {
     }
 }
 
-// TODO Internal state and API state have inconsistent (disjoint) data model. Needs thoughtful review and refactor.
 fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvLeGameState, Status> {
     let (
         proto_game_players,
         proto_round_players,
         opt_my_hand,
     ) = match state {
-        LoveLetterState::InProgress(data) => convert_game_data(data, player_id),
-        LoveLetterState::InProgressStaged(data, _staged) => convert_game_data(data, player_id),
+        LoveLetterState::PlayPending(data) => convert_game_data(data, player_id),
+        LoveLetterState::PlayStaging(data, _staged) => convert_game_data(data, player_id),
+        LoveLetterState::TurnIntermission(data) => convert_game_data(data, player_id),
+        LoveLetterState::RoundIntermission(data) => convert_game_data(data, player_id),
     }?;
 
     let my_hand = opt_my_hand

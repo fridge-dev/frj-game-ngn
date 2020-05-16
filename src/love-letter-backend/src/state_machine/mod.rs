@@ -6,12 +6,35 @@ use backend_framework::data_stream::PlayerDataStreams;
 use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
 
 /// The possible states of an instance of the game.
+///
+/// ```text
+/// +-------------------+    +-------------------+    +-------------------+
+/// |      (start)      |    |                   |    |                   |
+/// |    PlayPending    |--->|    PlayStaging    |--->|  TurnIntermission |
+/// |                   |    |                   |    |                   |
+/// +-------------------+    +-------------------+    +-------------------+
+///         ^    ^                                       |    |    |
+///         |    +----<----<----<----<----<----<----<----+    |    |
+///         |                                                 |    |
+///         |                +-------------------+            |    |
+///         |                |                   |            |    |
+///         +----<-----<-----| RoundIntermission |<-----<-----+    |
+///                          |                   |                 V
+///                          +-------------------+    +-------------------+
+///                                                   |       (fin)       |
+///                                                   |    GameComplete   |
+///                                                   |                   |
+///                                                   +-------------------+
+/// ```
 pub enum LoveLetterState {
-    InProgress(GameData),
-    InProgressStaged(GameData, StagedPlay),
-    // TODO TurnIntermission(GameData),
-    // TODO RoundIntermission(GameData),
-    // TODO GameComplete(GameResult),
+    PlayPending(GameData),
+    PlayStaging(GameData, StagedPlay),
+    TurnIntermission(GameData),
+    RoundIntermission(GameData),
+// TODO something like this:
+//    GameComplete{
+//        wins_per_player: HashMap<String, u8>,
+//    },
 }
 
 /// A state machine executor. It operates on states as inputs/outputs, not owned data.
