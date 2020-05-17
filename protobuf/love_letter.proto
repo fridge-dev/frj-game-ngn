@@ -69,7 +69,7 @@ message ProtoLvLeGameState {
         ProtoLvLeCard my_hand = 2;
         oneof turn {
             ProtoLvLeCard my_drawn_card = 3;
-            uint32 remaining_player_turn_index = 4;
+            string current_turn_player_id = 4;
         }
         ProtoLvLeCardSelection staged_play = 5;
         ProtoLvLeCommittedPlay most_recent_committed_play = 6;

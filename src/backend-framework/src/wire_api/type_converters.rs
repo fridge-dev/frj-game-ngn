@@ -99,9 +99,17 @@ mod enum_converters {
 /// Non-enum and non-oneof converters
 mod normal_converters {
     use crate::common_types::ClientInfo;
-    use crate::wire_api::proto_frj_ngn::{ProtoGameDataHandshake, ProtoGameType, ProtoLvLeCommittedPlay, proto_lv_le_card_selection, proto_lv_le_card_outcome, ProtoLvLeCardSelection, ProtoLvLeCardOutcome};
-    use crate::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{ProtoGuardOutcome, ProtoBaronOutcome, ProtoPrinceOutcome};
-    use crate::wire_api::proto_frj_ngn::proto_lv_le_card_selection::{ProtoGuardSelection, ProtoPriestSelection, ProtoBaronSelection, ProtoPrinceSelection, ProtoKingSelection};
+    use crate::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{
+        ProtoBaronOutcome, ProtoGuardOutcome, ProtoPrinceOutcome,
+    };
+    use crate::wire_api::proto_frj_ngn::proto_lv_le_card_selection::{
+        ProtoBaronSelection, ProtoGuardSelection, ProtoKingSelection, ProtoPriestSelection,
+        ProtoPrinceSelection,
+    };
+    use crate::wire_api::proto_frj_ngn::{
+        proto_lv_le_card_outcome, proto_lv_le_card_selection, ProtoGameDataHandshake,
+        ProtoGameType, ProtoLvLeCardOutcome, ProtoLvLeCardSelection, ProtoLvLeCommittedPlay,
+    };
 
     impl From<ProtoGameDataHandshake> for ClientInfo {
         fn from(handshake: ProtoGameDataHandshake) -> Self {
@@ -121,10 +129,10 @@ mod normal_converters {
         fn from((selection, outcome): (ProtoGuardSelection, ProtoGuardOutcome)) -> Self {
             ProtoLvLeCommittedPlay {
                 selection: Some(ProtoLvLeCardSelection {
-                    inner: Some(proto_lv_le_card_selection::Inner::Guard(selection))
+                    inner: Some(proto_lv_le_card_selection::Inner::Guard(selection)),
                 }),
                 outcome: Some(ProtoLvLeCardOutcome {
-                    inner: Some(proto_lv_le_card_outcome::Inner::Guard(outcome))
+                    inner: Some(proto_lv_le_card_outcome::Inner::Guard(outcome)),
                 }),
             }
         }
@@ -134,7 +142,7 @@ mod normal_converters {
         fn from(selection: ProtoPriestSelection) -> Self {
             ProtoLvLeCommittedPlay {
                 selection: Some(ProtoLvLeCardSelection {
-                    inner: Some(proto_lv_le_card_selection::Inner::Priest(selection))
+                    inner: Some(proto_lv_le_card_selection::Inner::Priest(selection)),
                 }),
                 outcome: None,
             }
@@ -145,10 +153,10 @@ mod normal_converters {
         fn from((selection, outcome): (ProtoBaronSelection, ProtoBaronOutcome)) -> Self {
             ProtoLvLeCommittedPlay {
                 selection: Some(ProtoLvLeCardSelection {
-                    inner: Some(proto_lv_le_card_selection::Inner::Baron(selection))
+                    inner: Some(proto_lv_le_card_selection::Inner::Baron(selection)),
                 }),
                 outcome: Some(ProtoLvLeCardOutcome {
-                    inner: Some(proto_lv_le_card_outcome::Inner::Baron(outcome))
+                    inner: Some(proto_lv_le_card_outcome::Inner::Baron(outcome)),
                 }),
             }
         }
@@ -158,10 +166,10 @@ mod normal_converters {
         fn from((selection, outcome): (ProtoPrinceSelection, ProtoPrinceOutcome)) -> Self {
             ProtoLvLeCommittedPlay {
                 selection: Some(ProtoLvLeCardSelection {
-                    inner: Some(proto_lv_le_card_selection::Inner::Prince(selection))
+                    inner: Some(proto_lv_le_card_selection::Inner::Prince(selection)),
                 }),
                 outcome: Some(ProtoLvLeCardOutcome {
-                    inner: Some(proto_lv_le_card_outcome::Inner::Prince(outcome))
+                    inner: Some(proto_lv_le_card_outcome::Inner::Prince(outcome)),
                 }),
             }
         }
@@ -171,7 +179,7 @@ mod normal_converters {
         fn from(selection: ProtoKingSelection) -> Self {
             ProtoLvLeCommittedPlay {
                 selection: Some(ProtoLvLeCardSelection {
-                    inner: Some(proto_lv_le_card_selection::Inner::King(selection))
+                    inner: Some(proto_lv_le_card_selection::Inner::King(selection)),
                 }),
                 outcome: None,
             }
@@ -182,7 +190,7 @@ mod normal_converters {
         pub fn empty() -> Self {
             ProtoLvLeCommittedPlay {
                 selection: None,
-                outcome: None
+                outcome: None,
             }
         }
     }

@@ -133,8 +133,8 @@ pub mod proto_lv_le_game_state {
         pub enum Turn {
             #[prost(enumeration = "super::super::ProtoLvLeCard", tag = "3")]
             MyDrawnCard(i32),
-            #[prost(uint32, tag = "4")]
-            RemainingPlayerTurnIndex(u32),
+            #[prost(string, tag = "4")]
+            CurrentTurnPlayerId(std::string::String),
         }
     }
     #[derive(Clone, PartialEq, ::prost::Message)]

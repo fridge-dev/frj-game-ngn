@@ -2,7 +2,7 @@ use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
 use crate::types::{GameData, RoundData, RoundResult};
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCommittedPlay, ProtoLvLeCardSelection};
 use tonic::Status;
-use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState};
+use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState, proto_lv_le_round_state};
 use std::collections::HashMap;
 
 impl LoveLetterStateMachineEventHandler {
@@ -81,10 +81,21 @@ fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeC
         .clone()
         .map(|play| ProtoLvLeCommittedPlay::from(play));
 
-    let play_history = round_data.play_history
+    let play_history: Vec<i32> = round_data.play_history
         .iter()
         .map(|card| ProtoLvLeCard::from(*card) as i32)
         .collect();
+
+    let turn: Option<proto_lv_le_round_state::Turn> = if my_player_id == round_data.players.current_turn_player_id() {
+        round_data.deck
+            .last()
+            .map(|c| ProtoLvLeCard::from(*c) as i32)
+            .map(|i| proto_lv_le_round_state::Turn::MyDrawnCard(i))
+    } else {
+        Some(proto_lv_le_round_state::Turn::CurrentTurnPlayerId(
+            round_data.players.current_turn_player_id().to_string()
+        ))
+    };
 
     ProtoLvLeRoundState {
         remaining_player_ids,
@@ -92,7 +103,7 @@ fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeC
         staged_play,
         most_recent_committed_play,
         play_history,
-        turn: None
+        turn,
     }
 }
 
