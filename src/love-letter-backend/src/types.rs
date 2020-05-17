@@ -103,16 +103,6 @@ impl RoundData {
             most_recent_play_details: None
         }
     }
-
-    pub fn get_card_to_stage(&self, player_id: &String, card_source: &PlayCardSource) -> Card {
-        match card_source {
-            PlayCardSource::Hand => self.players.get_card(player_id)
-                .expect("Player attempted to stage card without being in round."),
-            PlayCardSource::TopDeck => *self.deck
-                .last()
-                .expect("deck size"),
-        }
-    }
 }
 
 impl Players {

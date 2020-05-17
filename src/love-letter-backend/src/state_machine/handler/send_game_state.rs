@@ -6,15 +6,17 @@ use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLv
 use std::collections::HashMap;
 
 impl LoveLetterStateMachineEventHandler {
-    pub fn send_game_state(&self, state: &LoveLetterState, player_id: String) {
-        match convert_state(state, &player_id) {
-            Ok(proto_state) => self.streams.send_msg(&player_id, proto_state),
-            Err(status) => self.streams.send_err(&player_id, status),
-        }
+    pub fn send_game_state(&self, state: &LoveLetterState, player_id: &String) {
+        let proto_state = convert_state(state, &player_id);
+        self.streams.send_msg(&player_id, proto_state);
+    }
+
+    pub fn send_game_state_to_all(&self, state: &LoveLetterState) {
+        unimplemented!()
     }
 }
 
-fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvLeGameState, Status> {
+fn convert_state(state: &LoveLetterState, player_id: &String) -> ProtoLvLeGameState {
     let (
         players,
         stage,
@@ -49,11 +51,11 @@ fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvL
         ),
     };
 
-    Ok(ProtoLvLeGameState {
+    ProtoLvLeGameState {
         clock: 0,
         players,
         stage: Some(stage),
-    })
+    }
 }
 
 fn get_proto_players(game_data: &GameData) -> Vec<ProtoLvLePlayer> {

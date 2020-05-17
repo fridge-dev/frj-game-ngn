@@ -1,6 +1,6 @@
-use crate::events::PlayCardSource;
+use crate::events::{PlayCardSource, Card};
 use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
-use crate::types::StagedPlay;
+use crate::types::{StagedPlay, RoundData};
 use tonic::Status;
 
 impl LoveLetterStateMachineEventHandler {
@@ -21,21 +21,22 @@ impl LoveLetterStateMachineEventHandler {
 
                 // Idempotent check
                 let card_to_stage = round_data.get_card_to_stage(&player_id, &card_source);
-                if card_to_stage == staged_play.played_card {
-                    // TODO send ACK to only requesting player
-                    // Or send player some type of message telling them to re-get state
-                } else {
+                if card_to_stage != staged_play.played_card {
                     self.streams.send_err(&player_id, Status::failed_precondition("Can't play card while pending commit"));
                 }
 
                 // No state change
-                LoveLetterState::PlayStaging(game_data, round_data, staged_play)
+                let to_state = LoveLetterState::PlayStaging(game_data, round_data, staged_play);
+
+                // Notify caller of latest game state
+                self.send_game_state(&to_state, &player_id);
+
+                to_state
             },
             LoveLetterState::PlayPending(game_data, round_data) => {
+                // Is my turn
                 if &player_id != round_data.players.current_turn_player_id() {
                     self.streams.send_err(&player_id, Status::failed_precondition("Can't play card, not your turn"));
-
-                    // No state change
                     return LoveLetterState::PlayPending(game_data, round_data);
                 }
 
@@ -44,16 +45,25 @@ impl LoveLetterStateMachineEventHandler {
                 // TODO if selection not-needed, auto-commit
 
                 LoveLetterState::PlayStaging(game_data, round_data, StagedPlay::new(card_to_stage))
-            }
-            LoveLetterState::TurnIntermission(_, _) => {
-                // TODO handle staging
-                unimplemented!("LoveLetterStateMachineEventHandler.play_card_staged(TurnIntermission)");
-            }
-            LoveLetterState::RoundIntermission(_, _) => {
-                // TODO handle staging
-                unimplemented!("LoveLetterStateMachineEventHandler.play_card_staged(RoundIntermission)");
-            }
+            },
+            _ => {
+                self.streams.send_err(&player_id, Status::failed_precondition("Can't play card while in current state"));
+                from_state
+            },
         }
     }
 
+}
+
+impl RoundData {
+    fn get_card_to_stage(&self, player_id: &String, card_source: &PlayCardSource) -> Card {
+        match card_source {
+            PlayCardSource::Hand => self.players
+                .get_card(player_id)
+                .expect("Player attempted to stage card without being in round."),
+            PlayCardSource::TopDeck => *self.deck
+                .last()
+                .expect("Player attempted to stage card with empty deck."),
+        }
+    }
 }

@@ -73,12 +73,12 @@ impl LoveLetterStateMachine {
 
         match event.payload {
             LoveLetterEventType::GetGameState => {
-                self.handler.send_game_state(&from_state, player_id);
+                self.handler.send_game_state(&from_state, &player_id);
                 from_state
             },
             LoveLetterEventType::RegisterDataStream(stream_out) => {
                 self.handler.streams.add_stream(player_id.clone(), stream_out);
-                self.handler.send_game_state(&from_state, player_id);
+                self.handler.send_game_state(&from_state, &player_id);
                 from_state
             },
             LoveLetterEventType::PlayCardStaged(card_source) => {
