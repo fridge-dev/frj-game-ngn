@@ -26,7 +26,7 @@ impl LoveLetterStateMachineEventHandler {
                 let mut player_to_eliminate = PlayerToEliminate::none();
 
                 // Perform action
-                match staged_play.card {
+                match staged_play.played_card {
                     Card::Guard => {
                         // TODO more robust way of expecting staging (micro states?)
                         let target_player = staged_play.target_player.expect("Rule");

@@ -1,6 +1,6 @@
 use crate::events::{Card, PlayCardSource};
-use crate::types::CommittedPlay;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeCard, ProtoLvLeCommittedPlay};
+use crate::types::{CommittedPlay, StagedPlay};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeCard, ProtoLvLeCommittedPlay, ProtoLvLeCardSelection, proto_lv_le_card_selection};
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_play_card_req::ProtoLvLeCardSource;
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{ProtoGuardOutcome, ProtoBaronOutcome, ProtoPrinceOutcome};
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_card_selection::{ProtoGuardSelection, ProtoPriestSelection, ProtoBaronSelection, ProtoPrinceSelection, ProtoKingSelection};
@@ -106,6 +106,36 @@ impl From<CommittedPlay> for ProtoLvLeCommittedPlay {
             CommittedPlay::Countess => {
                 ProtoLvLeCommittedPlay::empty()
             },
+        }
+    }
+}
+
+impl From<StagedPlay> for ProtoLvLeCardSelection {
+    fn from(staged_play: StagedPlay) -> Self {
+        let opt = |s: Option<String>| s.unwrap_or("".to_string());
+
+        let proto_selection = match staged_play.played_card {
+            Card::Guard => Some(proto_lv_le_card_selection::Inner::Guard(ProtoGuardSelection {
+                opt_player_id: opt(staged_play.target_player),
+                opt_card: staged_play.target_card.map(|c| ProtoLvLeCard::from(c) as i32).unwrap_or(0),
+            })),
+            Card::Priest => Some(proto_lv_le_card_selection::Inner::Priest(ProtoPriestSelection {
+                opt_player_id: opt(staged_play.target_player),
+            })),
+            Card::Baron => Some(proto_lv_le_card_selection::Inner::Baron(ProtoBaronSelection {
+                opt_player_id: opt(staged_play.target_player),
+            })),
+            Card::Prince => Some(proto_lv_le_card_selection::Inner::Prince(ProtoPrinceSelection {
+                opt_player_id: opt(staged_play.target_player),
+            })),
+            Card::King => Some(proto_lv_le_card_selection::Inner::King(ProtoKingSelection {
+                opt_player_id: opt(staged_play.target_player),
+            })),
+            _ => None
+        };
+
+        ProtoLvLeCardSelection {
+            inner: proto_selection
         }
     }
 }

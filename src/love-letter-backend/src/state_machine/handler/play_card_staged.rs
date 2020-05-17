@@ -21,7 +21,7 @@ impl LoveLetterStateMachineEventHandler {
 
                 // Idempotent check
                 let card_to_stage = round_data.get_card_to_stage(&player_id, &card_source);
-                if card_to_stage == staged_play.card {
+                if card_to_stage == staged_play.played_card {
                     // TODO send ACK to only requesting player
                     // Or send player some type of message telling them to re-get state
                 } else {

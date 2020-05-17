@@ -1,6 +1,6 @@
 use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
 use crate::types::{GameData, RoundData, RoundResult};
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCommittedPlay};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCommittedPlay, ProtoLvLeCardSelection};
 use tonic::Status;
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState};
 use std::collections::HashMap;
@@ -21,15 +21,27 @@ fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvL
     ) = match state {
         LoveLetterState::PlayPending(game_data, round_data) => (
             get_proto_players(game_data),
-            Stage::RoundInProgress(into_proto_round_state(round_data, player_id)),
+            Stage::RoundInProgress(into_proto_round_state(
+                round_data,
+                None,
+                player_id
+            )),
         ),
-        LoveLetterState::PlayStaging(game_data, round_data, _staged) => (
+        LoveLetterState::PlayStaging(game_data, round_data, staged) => (
             get_proto_players(game_data),
-            Stage::RoundInProgress(into_proto_round_state(round_data, player_id)),
+            Stage::RoundInProgress(into_proto_round_state(
+                round_data,
+                Some(ProtoLvLeCardSelection::from(staged.clone())),
+                player_id
+            )),
         ),
         LoveLetterState::TurnIntermission(game_data, round_data) => (
             get_proto_players(game_data),
-            Stage::RoundInProgress(into_proto_round_state(round_data, player_id)),
+            Stage::RoundInProgress(into_proto_round_state(
+                round_data,
+                None,
+                player_id
+            )),
         ),
         LoveLetterState::RoundIntermission(game_data, round_result) => (
             get_proto_players(game_data),
@@ -58,7 +70,7 @@ fn get_proto_players(game_data: &GameData) -> Vec<ProtoLvLePlayer> {
     proto_game_players
 }
 
-fn into_proto_round_state(round_data: &RoundData, my_player_id: &String) -> ProtoLvLeRoundState {
+fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeCardSelection>, my_player_id: &String) -> ProtoLvLeRoundState {
     let remaining_player_ids = round_data.players.remaining_player_ids().clone();
     let my_hand: i32 = match round_data.players.get_card(my_player_id) {
         None => 0,
@@ -77,7 +89,7 @@ fn into_proto_round_state(round_data: &RoundData, my_player_id: &String) -> Prot
     ProtoLvLeRoundState {
         remaining_player_ids,
         my_hand,
-        staged_play: None,
+        staged_play,
         most_recent_committed_play,
         play_history,
         turn: None

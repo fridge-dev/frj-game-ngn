@@ -53,8 +53,9 @@ pub enum CommittedPlay {
     Countess,
 }
 
+#[derive(Clone)]
 pub struct StagedPlay {
-    pub card: Card,
+    pub played_card: Card,
     pub target_player: Option<String>,
     pub target_card: Option<Card>,
 }
@@ -199,9 +200,9 @@ impl Players {
 }
 
 impl StagedPlay {
-    pub fn new(card: Card) -> Self {
+    pub fn new(played_card: Card) -> Self {
         StagedPlay {
-            card,
+            played_card,
             target_player: None,
             target_card: None
         }
