@@ -1,8 +1,9 @@
 use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
-use crate::types::GameData;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, proto_lv_le_game_state};
+use crate::types::{GameData, RoundData, RoundResult};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCommittedPlay};
 use tonic::Status;
-use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer};
+use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState};
+use std::collections::HashMap;
 
 impl LoveLetterStateMachineEventHandler {
     pub fn send_game_state(&self, state: &LoveLetterState, player_id: String) {
@@ -15,74 +16,81 @@ impl LoveLetterStateMachineEventHandler {
 
 fn convert_state(state: &LoveLetterState, player_id: &String) -> Result<ProtoLvLeGameState, Status> {
     let (
-        proto_game_players,
-        proto_round_players,
-        opt_my_hand,
+        players,
+        stage,
     ) = match state {
-        LoveLetterState::PlayPending(data) => convert_game_data(data, player_id),
-        LoveLetterState::PlayStaging(data, _staged) => convert_game_data(data, player_id),
-        LoveLetterState::TurnIntermission(data) => convert_game_data(data, player_id),
-        LoveLetterState::RoundIntermission(data) => convert_game_data(data, player_id),
-    }?;
-
-    let my_hand = opt_my_hand
-        .map(|c| c as i32)
-        .unwrap_or(0);
-
-    let round_state = ProtoLvLeRoundState {
-        remaining_player_ids: proto_round_players,
-        my_hand,
-        staged_play: None,
-        most_recent_committed_play: None,
-        play_history: vec![],
-        turn: None
+        LoveLetterState::PlayPending(game_data, round_data) => (
+            get_proto_players(game_data),
+            Stage::RoundInProgress(into_proto_round_state(round_data, player_id)),
+        ),
+        LoveLetterState::PlayStaging(game_data, round_data, _staged) => (
+            get_proto_players(game_data),
+            Stage::RoundInProgress(into_proto_round_state(round_data, player_id)),
+        ),
+        LoveLetterState::TurnIntermission(game_data, round_data) => (
+            get_proto_players(game_data),
+            Stage::RoundInProgress(into_proto_round_state(round_data, player_id)),
+        ),
+        LoveLetterState::RoundIntermission(game_data, round_result) => (
+            get_proto_players(game_data),
+            Stage::RoundIntermission(into_proto_result_state(round_result)),
+        ),
     };
 
     Ok(ProtoLvLeGameState {
         clock: 0,
-        players: proto_game_players,
-        stage: Some(proto_lv_le_game_state::Stage::RoundInProgress(round_state)),
+        players,
+        stage: Some(stage),
     })
 }
 
-type ConvertGameDataResult = Result<
-    (
-        Vec<ProtoLvLePlayer>,
-        Vec<String>,
-        Option<ProtoLvLeCard>,
-    ),
-    Status
->;
+fn get_proto_players(game_data: &GameData) -> Vec<ProtoLvLePlayer> {
+    let mut proto_game_players: Vec<ProtoLvLePlayer> = Vec::with_capacity(game_data.player_id_turn_order.len());
 
-fn convert_game_data(data: &GameData, my_player_id: &String) -> ConvertGameDataResult {
-    let num_players = data.player_id_turn_order.len();
-    let mut proto_game_players: Vec<ProtoLvLePlayer> = Vec::with_capacity(num_players);
-    let mut proto_round_players: Vec<String> = Vec::with_capacity(num_players);
-    let mut opt_my_hand: Option<ProtoLvLeCard> = None;
-
-    for player_id in data.player_id_turn_order.iter() {
-        // Game state
+    for player_id in game_data.player_id_turn_order.iter() {
         let proto_player_state = ProtoLvLePlayer {
             player_id: player_id.to_string(),
-            round_wins: 0,
+            round_wins: game_data.wins_per_player.get(player_id).map(|n| *n as u32).unwrap_or(0),
         };
         proto_game_players.push(proto_player_state);
-
-        // Round state
-        let opt_player_card = data.current_round.players.get_card(player_id);
-        if opt_player_card.is_some() {
-            proto_round_players.push(player_id.to_string());
-        }
-
-        // My state
-        if my_player_id == player_id {
-            opt_my_hand = opt_player_card.map(|c| ProtoLvLeCard::from(c));
-        }
     }
 
-    Ok((
-        proto_game_players,
-        proto_round_players,
-        opt_my_hand,
-    ))
+    proto_game_players
+}
+
+fn into_proto_round_state(round_data: &RoundData, my_player_id: &String) -> ProtoLvLeRoundState {
+    let remaining_player_ids = round_data.players.remaining_player_ids().clone();
+    let my_hand: i32 = match round_data.players.get_card(my_player_id) {
+        None => 0,
+        Some(card) => ProtoLvLeCard::from(card) as i32,
+    };
+
+    let most_recent_committed_play = round_data.most_recent_play_details
+        .clone()
+        .map(|play| ProtoLvLeCommittedPlay::from(play));
+
+    let play_history = round_data.play_history
+        .iter()
+        .map(|card| ProtoLvLeCard::from(*card) as i32)
+        .collect();
+
+    ProtoLvLeRoundState {
+        remaining_player_ids,
+        my_hand,
+        staged_play: None,
+        most_recent_committed_play,
+        play_history,
+        turn: None
+    }
+}
+
+fn into_proto_result_state(round_result: &RoundResult) -> ProtoLvLeResultState {
+    let mut final_cards = HashMap::new();
+    for (player_id, card) in round_result.final_card_by_player_id.iter() {
+        final_cards.insert(player_id.clone(), ProtoLvLeCard::from(*card) as i32);
+    }
+
+    ProtoLvLeResultState {
+        final_cards,
+    }
 }

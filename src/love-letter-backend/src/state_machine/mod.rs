@@ -1,7 +1,7 @@
 mod handler;
 
 use crate::events::{LoveLetterEvent, LoveLetterEventType};
-use crate::types::{StagedPlay, GameData};
+use crate::types::{StagedPlay, GameData, RoundData, RoundResult};
 use backend_framework::data_stream::PlayerDataStreams;
 use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
 
@@ -27,14 +27,22 @@ use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
 ///                                                   +-------------------+
 /// ```
 pub enum LoveLetterState {
-    PlayPending(GameData),
-    PlayStaging(GameData, StagedPlay),
-    TurnIntermission(GameData),
-    RoundIntermission(GameData),
+    PlayPending(GameData, RoundData),
+    PlayStaging(GameData, RoundData, StagedPlay),
+    TurnIntermission(GameData, RoundData),
+    RoundIntermission(GameData, RoundResult),
 // TODO something like this:
 //    GameComplete{
 //        wins_per_player: HashMap<String, u8>,
 //    },
+}
+
+impl LoveLetterState {
+    pub fn initial_game_state(player_ids: Vec<String>) -> Self {
+        let round_data = RoundData::new(&player_ids);
+        let game_data = GameData::new(player_ids);
+        LoveLetterState::PlayPending(game_data, round_data)
+    }
 }
 
 /// A state machine executor. It operates on states as inputs/outputs, not owned data.

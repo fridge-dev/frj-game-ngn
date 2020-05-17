@@ -99,7 +99,9 @@ mod enum_converters {
 /// Non-enum and non-oneof converters
 mod normal_converters {
     use crate::common_types::ClientInfo;
-    use crate::wire_api::proto_frj_ngn::{ProtoGameDataHandshake, ProtoGameType};
+    use crate::wire_api::proto_frj_ngn::{ProtoGameDataHandshake, ProtoGameType, ProtoLvLeCommittedPlay, proto_lv_le_card_selection, proto_lv_le_card_outcome, ProtoLvLeCardSelection, ProtoLvLeCardOutcome};
+    use crate::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{ProtoGuardOutcome, ProtoBaronOutcome, ProtoPrinceOutcome};
+    use crate::wire_api::proto_frj_ngn::proto_lv_le_card_selection::{ProtoGuardSelection, ProtoPriestSelection, ProtoBaronSelection, ProtoPrinceSelection, ProtoKingSelection};
 
     impl From<ProtoGameDataHandshake> for ClientInfo {
         fn from(handshake: ProtoGameDataHandshake) -> Self {
@@ -111,6 +113,76 @@ mod normal_converters {
             ClientInfo {
                 player_id: handshake.player_id,
                 game_id: handshake.game_id,
+            }
+        }
+    }
+
+    impl From<(ProtoGuardSelection, ProtoGuardOutcome)> for ProtoLvLeCommittedPlay {
+        fn from((selection, outcome): (ProtoGuardSelection, ProtoGuardOutcome)) -> Self {
+            ProtoLvLeCommittedPlay {
+                selection: Some(ProtoLvLeCardSelection {
+                    inner: Some(proto_lv_le_card_selection::Inner::Guard(selection))
+                }),
+                outcome: Some(ProtoLvLeCardOutcome {
+                    inner: Some(proto_lv_le_card_outcome::Inner::Guard(outcome))
+                }),
+            }
+        }
+    }
+
+    impl From<ProtoPriestSelection> for ProtoLvLeCommittedPlay {
+        fn from(selection: ProtoPriestSelection) -> Self {
+            ProtoLvLeCommittedPlay {
+                selection: Some(ProtoLvLeCardSelection {
+                    inner: Some(proto_lv_le_card_selection::Inner::Priest(selection))
+                }),
+                outcome: None,
+            }
+        }
+    }
+
+    impl From<(ProtoBaronSelection, ProtoBaronOutcome)> for ProtoLvLeCommittedPlay {
+        fn from((selection, outcome): (ProtoBaronSelection, ProtoBaronOutcome)) -> Self {
+            ProtoLvLeCommittedPlay {
+                selection: Some(ProtoLvLeCardSelection {
+                    inner: Some(proto_lv_le_card_selection::Inner::Baron(selection))
+                }),
+                outcome: Some(ProtoLvLeCardOutcome {
+                    inner: Some(proto_lv_le_card_outcome::Inner::Baron(outcome))
+                }),
+            }
+        }
+    }
+
+    impl From<(ProtoPrinceSelection, ProtoPrinceOutcome)> for ProtoLvLeCommittedPlay {
+        fn from((selection, outcome): (ProtoPrinceSelection, ProtoPrinceOutcome)) -> Self {
+            ProtoLvLeCommittedPlay {
+                selection: Some(ProtoLvLeCardSelection {
+                    inner: Some(proto_lv_le_card_selection::Inner::Prince(selection))
+                }),
+                outcome: Some(ProtoLvLeCardOutcome {
+                    inner: Some(proto_lv_le_card_outcome::Inner::Prince(outcome))
+                }),
+            }
+        }
+    }
+
+    impl From<ProtoKingSelection> for ProtoLvLeCommittedPlay {
+        fn from(selection: ProtoKingSelection) -> Self {
+            ProtoLvLeCommittedPlay {
+                selection: Some(ProtoLvLeCardSelection {
+                    inner: Some(proto_lv_le_card_selection::Inner::King(selection))
+                }),
+                outcome: None,
+            }
+        }
+    }
+
+    impl ProtoLvLeCommittedPlay {
+        pub fn empty() -> Self {
+            ProtoLvLeCommittedPlay {
+                selection: None,
+                outcome: None
             }
         }
     }

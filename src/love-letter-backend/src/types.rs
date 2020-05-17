@@ -5,7 +5,6 @@ use std::collections::HashMap;
 pub struct GameData {
     pub player_id_turn_order: Vec<String>,
     pub wins_per_player: HashMap<String, u8>,
-    pub current_round: RoundData,
 }
 
 pub struct RoundData {
@@ -28,7 +27,7 @@ pub struct Players {
     turn_cursor: usize,
 }
 
-#[allow(dead_code)] // TODO use this
+#[derive(Clone, Debug)]
 pub enum CommittedPlay {
     Guard {
         target_player_id: String,
@@ -60,14 +59,16 @@ pub struct StagedPlay {
     pub target_card: Option<Card>,
 }
 
+pub struct RoundResult {
+    /// Sparse map, missing value => player eliminated
+    pub final_card_by_player_id: HashMap<String, Card>
+}
+
 impl GameData {
     pub fn new(player_ids: Vec<String>) -> Self {
-        let current_round = RoundData::new(&player_ids);
-
         GameData {
             player_id_turn_order: player_ids,
             wins_per_player: HashMap::new(),
-            current_round,
         }
     }
 }
@@ -123,8 +124,11 @@ impl Players {
     }
 
     pub fn insert_at_tail(&mut self, player_id: String, card: Card) {
-        self.turn_order.push(player_id.clone());
-        self.cards.insert(player_id, card);
+        if self.cards.contains_key(&player_id) {
+            panic!("Non-unique players in game");
+        }
+        self.cards.insert(player_id.clone(), card);
+        self.turn_order.push(player_id);
     }
 
     pub fn get_card(&self, player_id: &String) -> Option<Card> {
@@ -133,14 +137,19 @@ impl Players {
             .map(|c| *c)
     }
 
-    pub fn increment_turn(&mut self) {
-        self.turn_cursor = (self.turn_cursor + 1) % self.turn_order.len();
+    pub fn remaining_player_ids(&self) -> &Vec<String> {
+        &self.turn_order
     }
 
     pub fn current_turn_player_id(&self) -> &String {
         self.turn_order
             .get(self.turn_cursor)
             .expect("Cursor should always ensure valid access")
+    }
+
+    pub fn increment_turn(&mut self) {
+        self.turn_cursor = (self.turn_cursor + 1) % self.turn_order.len();
+        self.validate_invariants();
     }
 
     /// Must be done as atomic operation
@@ -168,14 +177,24 @@ impl Players {
         // call this no matter what.
         self.turn_cursor %= self.turn_order.len();
 
-        self.cards
+        let removed_card = self.cards
             .remove(player_id)
-            .expect("Players.eliminate_and_increment_turn() on player without card.")
+            .expect("Players.eliminate_and_increment_turn() on player without card.");
+
+        self.validate_invariants();
+        removed_card
     }
 
-    // TODO use IntoIterator trait
-    pub fn into_iter(self) -> impl Iterator<Item = (String, Card)> {
-        self.cards.into_iter()
+    fn validate_invariants(&mut self) {
+        assert!(self.turn_cursor < self.turn_order.len(), "turn_cursor out of bounds");
+        assert_eq!(self.cards.len(), self.turn_order.len(), "num players != num cards");
+        for player_id in self.turn_order.iter() {
+            assert!(self.cards.contains_key(player_id), "player in game, but with no card");
+        }
+    }
+
+    pub fn into_player_card_map(self) -> HashMap<String, Card> {
+        self.cards
     }
 }
 
@@ -194,5 +213,13 @@ impl StagedPlay {
 
     pub fn set_target_card(&mut self, card: Card) {
         self.target_card.replace(card);
+    }
+}
+
+impl RoundResult {
+    pub fn new(final_card_by_player_id: HashMap<String, Card>) -> Self {
+        RoundResult {
+            final_card_by_player_id,
+        }
     }
 }

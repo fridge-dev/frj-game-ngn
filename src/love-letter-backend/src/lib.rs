@@ -7,7 +7,6 @@ mod type_converters;
 
 use crate::events::LoveLetterEvent;
 use crate::state_machine::{LoveLetterState, LoveLetterStateMachine};
-use crate::types::GameData;
 use backend_framework::holder::Holder;
 
 /// This is the top level class for managing a single game of LoveLetter.
@@ -20,7 +19,7 @@ impl LoveLetterInstanceManager {
 
     pub fn new(player_ids: Vec<String>) -> Self {
         LoveLetterInstanceManager {
-            state: Holder::new(LoveLetterState::PlayPending(GameData::new(player_ids.clone()))),
+            state: Holder::new(LoveLetterState::initial_game_state(player_ids.clone())),
             state_machine: LoveLetterStateMachine::new(player_ids),
         }
     }

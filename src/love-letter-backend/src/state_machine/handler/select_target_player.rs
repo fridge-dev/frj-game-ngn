@@ -10,16 +10,16 @@ impl LoveLetterStateMachineEventHandler {
     ) -> LoveLetterState {
         // TODO being lazy, fill out full match statement... Only happy path for now
         match from_state {
-            LoveLetterState::PlayPending(_) => from_state,
-            LoveLetterState::PlayStaging(game_data, mut staged_play) => {
+            LoveLetterState::PlayPending(_, _) => from_state,
+            LoveLetterState::PlayStaging(game_data, round_data, mut staged_play) => {
                 // TODO check if player is still in game
                 staged_play.set_target_player(target_player_id);
-                LoveLetterState::PlayStaging(game_data, staged_play)
+                LoveLetterState::PlayStaging(game_data, round_data, staged_play)
             }
-            LoveLetterState::TurnIntermission(_) => {
+            LoveLetterState::TurnIntermission(_, _) => {
                 unimplemented!("LoveLetterStateMachineEventHandler.select_target_player(TurnIntermission)");
             }
-            LoveLetterState::RoundIntermission(_) => {
+            LoveLetterState::RoundIntermission(_, _) => {
                 unimplemented!("LoveLetterStateMachineEventHandler.select_target_player(RoundIntermission)");
             }
         }
