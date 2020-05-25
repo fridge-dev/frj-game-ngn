@@ -6,27 +6,35 @@ use std::collections::HashMap;
 
 impl LoveLetterStateMachine {
     pub fn send_game_state(&self, state: &LoveLetterState, player_id: &String) {
-        let proto_state = self.convert_state(state, &player_id);
-        self.streams.send_msg(&player_id, proto_state);
+        let proto_all_players = get_proto_all_players(&self.game_data);
+
+        self.send_game_state_to_player(player_id, state, proto_all_players);
     }
 
     pub fn send_game_state_to_all(&self, state: &LoveLetterState) {
-        unimplemented!()
+        let proto_all_players = get_proto_all_players(&self.game_data);
+
+        for player_id in self.game_data.player_id_turn_order.iter() {
+            self.send_game_state_to_player(player_id, state, proto_all_players.clone());
+        }
     }
 
-    fn convert_state(&self, state: &LoveLetterState, player_id: &String) -> ProtoLvLeGameState {
-        let players = get_proto_players(&self.game_data);
-        let stage = into_proto_stage(state, player_id);
-
-        ProtoLvLeGameState {
+    fn send_game_state_to_player(
+        &self,
+        player_id: &String,
+        state: &LoveLetterState,
+        proto_all_players: Vec<ProtoLvLePlayer>
+    ) {
+        let proto_state = ProtoLvLeGameState {
             clock: 0,
-            players,
-            stage: Some(stage),
-        }
+            players: proto_all_players,
+            stage: Some(into_proto_stage(state, player_id)),
+        };
+        self.streams.send_msg(player_id, proto_state);
     }
 }
 
-fn get_proto_players(game_data: &GameData) -> Vec<ProtoLvLePlayer> {
+fn get_proto_all_players(game_data: &GameData) -> Vec<ProtoLvLePlayer> {
     let mut proto_game_players: Vec<ProtoLvLePlayer> = Vec::with_capacity(game_data.player_id_turn_order.len());
 
     for player_id in game_data.player_id_turn_order.iter() {
