@@ -1,6 +1,6 @@
-use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
+use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
 
-impl LoveLetterStateMachineEventHandler {
+impl LoveLetterStateMachine {
 
     pub fn select_target_player(
         &self,
@@ -10,16 +10,16 @@ impl LoveLetterStateMachineEventHandler {
     ) -> LoveLetterState {
         // TODO being lazy, fill out full match statement... Only happy path for now
         match from_state {
-            LoveLetterState::PlayPending(_, _) => from_state,
-            LoveLetterState::PlayStaging(game_data, round_data, mut staged_play) => {
+            LoveLetterState::PlayPending(_) => from_state,
+            LoveLetterState::PlayStaging(round_data, mut staged_play) => {
                 // TODO check if player is still in game
                 staged_play.set_target_player(target_player_id);
-                LoveLetterState::PlayStaging(game_data, round_data, staged_play)
+                LoveLetterState::PlayStaging(round_data, staged_play)
             }
-            LoveLetterState::TurnIntermission(_, _) => {
+            LoveLetterState::TurnIntermission(_) => {
                 unimplemented!("LoveLetterStateMachineEventHandler.select_target_player(TurnIntermission)");
             }
-            LoveLetterState::RoundIntermission(_, _) => {
+            LoveLetterState::RoundIntermission(_) => {
                 unimplemented!("LoveLetterStateMachineEventHandler.select_target_player(RoundIntermission)");
             }
         }

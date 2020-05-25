@@ -1,5 +1,5 @@
 use crate::deck;
-use crate::events::{PlayCardSource, Card};
+use crate::events::Card;
 use std::collections::HashMap;
 
 pub struct GameData {

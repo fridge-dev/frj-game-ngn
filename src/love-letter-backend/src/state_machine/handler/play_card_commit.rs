@@ -1,8 +1,8 @@
 use crate::events::Card;
-use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
+use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
 use crate::types::RoundResult;
 
-impl LoveLetterStateMachineEventHandler {
+impl LoveLetterStateMachine {
 
     pub fn play_card_commit(
         &mut self,
@@ -10,19 +10,19 @@ impl LoveLetterStateMachineEventHandler {
         player_id: String
     ) -> LoveLetterState {
         match from_state {
-            LoveLetterState::PlayPending(game_data, round_data) => {
+            LoveLetterState::PlayPending(round_data) => {
                 // TODO if selection not-needed, auto-commit
-                LoveLetterState::PlayPending(game_data, round_data)
+                LoveLetterState::PlayPending(round_data)
             },
-            LoveLetterState::TurnIntermission(game_data, round_data) => {
+            LoveLetterState::TurnIntermission(round_data) => {
                 // TODO inform caller of bad request
-                LoveLetterState::TurnIntermission(game_data, round_data)
+                LoveLetterState::TurnIntermission(round_data)
             },
-            LoveLetterState::RoundIntermission(game_data, round_result) => {
+            LoveLetterState::RoundIntermission(round_result) => {
                 // TODO inform caller of bad request
-                LoveLetterState::RoundIntermission(game_data, round_result)
+                LoveLetterState::RoundIntermission(round_result)
             },
-            LoveLetterState::PlayStaging(mut game_data, mut round_data, staged_play) => {
+            LoveLetterState::PlayStaging(mut round_data, staged_play) => {
                 let mut player_to_eliminate = PlayerToEliminate::none();
 
                 // Perform action
@@ -91,18 +91,18 @@ impl LoveLetterStateMachineEventHandler {
                         }
 
                         for player_id in winners {
-                            *game_data.wins_per_player.entry(player_id).or_insert(0) += 1;
+                            *self.game_data.wins_per_player.entry(player_id).or_insert(0) += 1;
                         }
 
                         // TODO notify players
 
                         // TODO new API to start next round
-                        LoveLetterState::RoundIntermission(game_data, RoundResult::new(final_card_by_player_id))
+                        LoveLetterState::RoundIntermission(RoundResult::new(final_card_by_player_id))
                     },
                     Some(next_card) => {
                         let next_player = round_data.players.current_turn_player_id();
                         // TODO notify players
-                        LoveLetterState::PlayPending(game_data, round_data)
+                        LoveLetterState::PlayPending(round_data)
                     },
                 }
             },

@@ -1,60 +1,28 @@
-use crate::state_machine::{LoveLetterStateMachineEventHandler, LoveLetterState};
+use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
 use crate::types::{GameData, RoundData, RoundResult};
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCommittedPlay, ProtoLvLeCardSelection};
-use tonic::Status;
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState, proto_lv_le_round_state};
 use std::collections::HashMap;
 
-impl LoveLetterStateMachineEventHandler {
+impl LoveLetterStateMachine {
     pub fn send_game_state(&self, state: &LoveLetterState, player_id: &String) {
-        let proto_state = convert_state(state, &player_id);
+        let proto_state = self.convert_state(state, &player_id);
         self.streams.send_msg(&player_id, proto_state);
     }
 
     pub fn send_game_state_to_all(&self, state: &LoveLetterState) {
         unimplemented!()
     }
-}
 
-fn convert_state(state: &LoveLetterState, player_id: &String) -> ProtoLvLeGameState {
-    let (
-        players,
-        stage,
-    ) = match state {
-        LoveLetterState::PlayPending(game_data, round_data) => (
-            get_proto_players(game_data),
-            Stage::RoundInProgress(into_proto_round_state(
-                round_data,
-                None,
-                player_id
-            )),
-        ),
-        LoveLetterState::PlayStaging(game_data, round_data, staged) => (
-            get_proto_players(game_data),
-            Stage::RoundInProgress(into_proto_round_state(
-                round_data,
-                Some(ProtoLvLeCardSelection::from(staged.clone())),
-                player_id
-            )),
-        ),
-        LoveLetterState::TurnIntermission(game_data, round_data) => (
-            get_proto_players(game_data),
-            Stage::RoundInProgress(into_proto_round_state(
-                round_data,
-                None,
-                player_id
-            )),
-        ),
-        LoveLetterState::RoundIntermission(game_data, round_result) => (
-            get_proto_players(game_data),
-            Stage::RoundIntermission(into_proto_result_state(round_result)),
-        ),
-    };
+    fn convert_state(&self, state: &LoveLetterState, player_id: &String) -> ProtoLvLeGameState {
+        let players = get_proto_players(&self.game_data);
+        let stage = into_proto_stage(state, player_id);
 
-    ProtoLvLeGameState {
-        clock: 0,
-        players,
-        stage: Some(stage),
+        ProtoLvLeGameState {
+            clock: 0,
+            players,
+            stage: Some(stage),
+        }
     }
 }
 
@@ -70,6 +38,35 @@ fn get_proto_players(game_data: &GameData) -> Vec<ProtoLvLePlayer> {
     }
 
     proto_game_players
+}
+
+fn into_proto_stage(state: &LoveLetterState, player_id: &String) -> Stage {
+    match state {
+        LoveLetterState::PlayPending(round_data) => Stage::RoundInProgress(
+            into_proto_round_state(
+                round_data,
+                None,
+                player_id,
+            )
+        ),
+        LoveLetterState::PlayStaging(round_data, staged) => Stage::RoundInProgress(
+            into_proto_round_state(
+                round_data,
+                Some(ProtoLvLeCardSelection::from(staged.clone())),
+                player_id
+            )
+        ),
+        LoveLetterState::TurnIntermission(round_data) => Stage::RoundInProgress(
+            into_proto_round_state(
+                round_data,
+                None,
+                player_id
+            )
+        ),
+        LoveLetterState::RoundIntermission(round_result) => Stage::RoundIntermission(
+            into_proto_result_state(round_result)
+        ),
+    }
 }
 
 fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeCardSelection>, my_player_id: &String) -> ProtoLvLeRoundState {
