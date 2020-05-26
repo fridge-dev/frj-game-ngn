@@ -1,6 +1,8 @@
 use crate::deck;
-use crate::events::Card;
-use std::collections::HashMap;
+use crate::events::{Card, PlayCardSource};
+use std::collections::{HashMap, HashSet};
+
+// ---------------- struct defs --------------------
 
 pub struct GameData {
     pub player_id_turn_order: Vec<String>,
@@ -12,6 +14,7 @@ pub struct RoundData {
     pub players: Players,
     pub play_history: Vec<Card>,
     pub most_recent_play_details: Option<CommittedPlay>,
+    pub handmaid_immunity_player_ids: HashSet<String>
 }
 
 /// Struct to track which players are still in game, which card they have, and turn order.
@@ -27,20 +30,38 @@ pub struct Players {
     turn_cursor: usize,
 }
 
+#[derive(Clone)]
+pub struct StagedPlay {
+    pub played_card: Card,
+    pub source: PlayCardSource,
+    pub target_player: Option<String>,
+    pub target_card: Option<Card>,
+}
+
 #[derive(Clone, Debug)]
-pub enum CommittedPlay {
+pub struct CommittedPlay {
+    pub committer_player_id: String,
+    pub outcome: CommittedPlayOutcome,
+}
+
+#[derive(Clone, Debug)]
+pub enum CommittedPlayOutcome {
     Guard {
         target_player_id: String,
-        target_card: Card,
+        guessed_card: Card,
         correct: bool,
     },
     Priest {
         target_player_id: String,
+        // Player-specific:
+        opponent_card: Card,
     },
     Baron {
         target_player_id: String,
-        eliminated_player_id: String,
-        eliminated_card: Card,
+        eliminated_player_id: Option<String>,
+        // Player-specific:
+        committer_card: Card,
+        opponent_card: Card,
     },
     Handmaid,
     Prince {
@@ -49,21 +70,18 @@ pub enum CommittedPlay {
     },
     King {
         target_player_id: String,
+        // No player-specific info. Players will learn of their newly swapped cards on next game snapshot.
     },
     Countess,
-}
-
-#[derive(Clone)]
-pub struct StagedPlay {
-    pub played_card: Card,
-    pub target_player: Option<String>,
-    pub target_card: Option<Card>,
+    Princess,
 }
 
 pub struct RoundResult {
     /// Sparse map, missing value => player eliminated
     pub final_card_by_player_id: HashMap<String, Card>
 }
+
+// ---------------- impl blocks --------------------
 
 impl GameData {
     pub fn new(player_ids: Vec<String>) -> Self {
@@ -79,9 +97,6 @@ impl RoundData {
         let mut deck = deck::new_shuffled_deck();
         let mut turn_cursor = rand::random::<usize>() % player_ids.len();
         let mut players = Players::with_capacity(player_ids.len());
-
-        // Discard the top card
-        deck.pop();
 
         // Deal 1 card to each player
         for _ in 0..player_ids.len() {
@@ -100,7 +115,19 @@ impl RoundData {
             deck,
             players,
             play_history,
-            most_recent_play_details: None
+            most_recent_play_details: None,
+            handmaid_immunity_player_ids: HashSet::new(),
+        }
+    }
+
+    pub fn get_card_to_stage(&self, player_id: &String, card_source: &PlayCardSource) -> Card {
+        match card_source {
+            PlayCardSource::Hand => self.players
+                .get_card(player_id)
+                .expect("Player attempted to stage card without being in round."),
+            PlayCardSource::TopDeck => *self.deck
+                .last()
+                .expect("Player attempted to stage card with empty deck."),
         }
     }
 }
@@ -126,6 +153,15 @@ impl Players {
         self.cards
             .get(player_id)
             .map(|c| *c)
+    }
+
+    pub fn replace_card(&mut self, player_id: String, new_card: Card) -> Card {
+        if !self.cards.contains_key(&player_id) {
+            panic!("Players.replace_card() can only be called on players who are in the game.");
+        }
+
+        self.cards.insert(player_id, new_card)
+            .expect("No fricking way. There's a validation for this 4 lines of code above.")
     }
 
     pub fn remaining_player_ids(&self) -> &Vec<String> {
@@ -190,9 +226,10 @@ impl Players {
 }
 
 impl StagedPlay {
-    pub fn new(played_card: Card) -> Self {
+    pub fn new(played_card: Card, source: PlayCardSource) -> Self {
         StagedPlay {
             played_card,
+            source,
             target_player: None,
             target_card: None
         }

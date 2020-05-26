@@ -64,7 +64,7 @@ fn into_proto_stage(state: &LoveLetterState, player_id: &String) -> Stage {
                 player_id
             )
         ),
-        LoveLetterState::TurnIntermission(round_data) => Stage::RoundInProgress(
+        LoveLetterState::TurnIntermission(round_data, committed_play) => Stage::RoundInProgress(
             into_proto_round_state(
                 round_data,
                 None,
@@ -86,7 +86,7 @@ fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeC
 
     let most_recent_committed_play = round_data.most_recent_play_details
         .clone()
-        .map(|play| ProtoLvLeCommittedPlay::from(play));
+        .map(|play| ProtoLvLeCommittedPlay::from(play.outcome));
 
     let play_history: Vec<i32> = round_data.play_history
         .iter()

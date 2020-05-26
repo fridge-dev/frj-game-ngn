@@ -1,5 +1,5 @@
 use crate::events::{Card, PlayCardSource};
-use crate::types::{CommittedPlay, StagedPlay};
+use crate::types::{StagedPlay, CommittedPlayOutcome};
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeCard, ProtoLvLeCommittedPlay, ProtoLvLeCardSelection, proto_lv_le_card_selection};
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_play_card_req::ProtoLvLeCardSource;
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{ProtoGuardOutcome, ProtoBaronOutcome, ProtoPrinceOutcome};
@@ -51,13 +51,14 @@ impl From<Card> for ProtoLvLeCard {
     }
 }
 
-impl From<CommittedPlay> for ProtoLvLeCommittedPlay {
-    fn from(committed_play: CommittedPlay) -> Self {
+impl From<CommittedPlayOutcome> for ProtoLvLeCommittedPlay {
+    fn from(committed_play: CommittedPlayOutcome) -> Self {
+        // TODO fix
         match committed_play {
-            CommittedPlay::Guard { target_player_id, target_card, correct } => {
+            CommittedPlayOutcome::Guard { target_player_id, guessed_card, correct } => {
                 let selection = ProtoGuardSelection {
                     opt_player_id: target_player_id,
-                    opt_card: ProtoLvLeCard::from(target_card) as i32,
+                    opt_card: ProtoLvLeCard::from(guessed_card) as i32,
                 };
                 let outcome = ProtoGuardOutcome {
                     correct
@@ -65,28 +66,33 @@ impl From<CommittedPlay> for ProtoLvLeCommittedPlay {
 
                 ProtoLvLeCommittedPlay::from((selection, outcome))
             },
-            CommittedPlay::Priest { target_player_id } => {
+            CommittedPlayOutcome::Priest { target_player_id, opponent_card } => {
                 let selection = ProtoPriestSelection {
                     opt_player_id: target_player_id
                 };
 
                 ProtoLvLeCommittedPlay::from(selection)
             },
-            CommittedPlay::Baron { target_player_id, eliminated_player_id, eliminated_card } => {
+            CommittedPlayOutcome::Baron {
+                target_player_id,
+                eliminated_player_id,
+                committer_card,
+                opponent_card
+            } => {
                 let selection = ProtoBaronSelection {
                     opt_player_id: target_player_id
                 };
                 let outcome = ProtoBaronOutcome {
-                    losing_player_id: eliminated_player_id,
-                    losing_player_card: ProtoLvLeCard::from(eliminated_card) as i32
+                    losing_player_id: eliminated_player_id.expect("TODO don't"),
+                    losing_player_card: ProtoLvLeCard::from(Card::Guard) as i32
                 };
 
                 ProtoLvLeCommittedPlay::from((selection, outcome))
             },
-            CommittedPlay::Handmaid => {
+            CommittedPlayOutcome::Handmaid => {
                 ProtoLvLeCommittedPlay::empty()
             },
-            CommittedPlay::Prince { target_player_id, discarded_card } => {
+            CommittedPlayOutcome::Prince { target_player_id, discarded_card } => {
                 let selection = ProtoPrinceSelection {
                     opt_player_id: target_player_id
                 };
@@ -96,16 +102,19 @@ impl From<CommittedPlay> for ProtoLvLeCommittedPlay {
 
                 ProtoLvLeCommittedPlay::from((selection, outcome))
             },
-            CommittedPlay::King { target_player_id } => {
+            CommittedPlayOutcome::King { target_player_id } => {
                 let selection = ProtoKingSelection {
                     opt_player_id: target_player_id
                 };
 
                 ProtoLvLeCommittedPlay::from(selection)
             },
-            CommittedPlay::Countess => {
+            CommittedPlayOutcome::Countess => {
                 ProtoLvLeCommittedPlay::empty()
             },
+            CommittedPlayOutcome::Princess => {
+                ProtoLvLeCommittedPlay::empty()
+            }
         }
     }
 }

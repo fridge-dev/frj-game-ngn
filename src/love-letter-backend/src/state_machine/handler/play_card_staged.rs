@@ -1,6 +1,6 @@
-use crate::events::{PlayCardSource, Card};
+use crate::events::PlayCardSource;
 use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
-use crate::types::{StagedPlay, RoundData};
+use crate::types::StagedPlay;
 use tonic::Status;
 
 impl LoveLetterStateMachine {
@@ -42,9 +42,11 @@ impl LoveLetterStateMachine {
 
                 let card_to_stage = round_data.get_card_to_stage(&player_id, &card_source);
 
+                // TODO validate Countess condition
+
                 // TODO if selection not-needed, auto-commit
 
-                LoveLetterState::PlayStaging(round_data, StagedPlay::new(card_to_stage))
+                LoveLetterState::PlayStaging(round_data, StagedPlay::new(card_to_stage, card_source))
             },
             _ => {
                 self.streams.send_err(&player_id, Status::failed_precondition("Can't play card while in current state"));
@@ -53,17 +55,4 @@ impl LoveLetterStateMachine {
         }
     }
 
-}
-
-impl RoundData {
-    fn get_card_to_stage(&self, player_id: &String, card_source: &PlayCardSource) -> Card {
-        match card_source {
-            PlayCardSource::Hand => self.players
-                .get_card(player_id)
-                .expect("Player attempted to stage card without being in round."),
-            PlayCardSource::TopDeck => *self.deck
-                .last()
-                .expect("Player attempted to stage card with empty deck."),
-        }
-    }
 }

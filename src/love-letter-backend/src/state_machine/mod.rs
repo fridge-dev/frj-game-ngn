@@ -3,7 +3,7 @@
 //! 2. `LoveLetterState` - holds data that is optionally present depending on the current game state.
 mod handler;
 
-use crate::types::{StagedPlay, GameData, RoundData, RoundResult};
+use crate::types::{StagedPlay, GameData, RoundData, RoundResult, CommittedPlay};
 use backend_framework::data_stream::PlayerDataStreams;
 use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
@@ -32,7 +32,7 @@ use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
 pub enum LoveLetterState {
     PlayPending(RoundData),
     PlayStaging(RoundData, StagedPlay),
-    TurnIntermission(RoundData),
+    TurnIntermission(RoundData, CommittedPlay),
     RoundIntermission(RoundResult),
     // TODO: GameComplete(()),
 }
