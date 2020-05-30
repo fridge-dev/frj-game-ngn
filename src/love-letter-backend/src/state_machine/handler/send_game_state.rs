@@ -1,6 +1,6 @@
 use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
 use crate::types::{GameData, RoundData, RoundResult};
-use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCommittedPlay, ProtoLvLeCardSelection};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCardSelection};
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState, proto_lv_le_round_state};
 use std::collections::HashMap;
 
@@ -86,7 +86,7 @@ fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeC
 
     let most_recent_committed_play = round_data.most_recent_play_details
         .clone()
-        .map(|play| ProtoLvLeCommittedPlay::from(play.outcome));
+        .map(|play| play.into_proto(my_player_id));
 
     let play_history: Vec<i32> = round_data.play_history
         .iter()

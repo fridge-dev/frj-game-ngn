@@ -100,7 +100,7 @@ mod enum_converters {
 mod normal_converters {
     use crate::common_types::ClientInfo;
     use crate::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{
-        ProtoBaronOutcome, ProtoGuardOutcome, ProtoPrinceOutcome,
+        ProtoBaronOutcome, ProtoGuardOutcome, ProtoPriestOutcome, ProtoPrinceOutcome,
     };
     use crate::wire_api::proto_frj_ngn::proto_lv_le_card_selection::{
         ProtoBaronSelection, ProtoGuardSelection, ProtoKingSelection, ProtoPriestSelection,
@@ -138,13 +138,15 @@ mod normal_converters {
         }
     }
 
-    impl From<ProtoPriestSelection> for ProtoLvLeCommittedPlay {
-        fn from(selection: ProtoPriestSelection) -> Self {
+    impl From<(ProtoPriestSelection, ProtoPriestOutcome)> for ProtoLvLeCommittedPlay {
+        fn from((selection, outcome): (ProtoPriestSelection, ProtoPriestOutcome)) -> Self {
             ProtoLvLeCommittedPlay {
                 selection: Some(ProtoLvLeCardSelection {
                     inner: Some(proto_lv_le_card_selection::Inner::Priest(selection)),
                 }),
-                outcome: None,
+                outcome: Some(ProtoLvLeCardOutcome {
+                    inner: Some(proto_lv_le_card_outcome::Inner::Priest(outcome)),
+                }),
             }
         }
     }

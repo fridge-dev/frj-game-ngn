@@ -198,7 +198,7 @@ message ProtoLvLeCardSelection {
 
 // Publicly broadcasted data after playing a card:
 // 1 - Guard    : `(bool)` - was guess correct
-// 2 - Priest   : `()`
+// 2 - Priest   : `(String)` - opponent's card (player-specific)
 // 3 - Baron    : `(String, Card)` - the player+card that was knocked out
 // 4 - Handmaid : `()`
 // 5 - Prince   : `(Card)` - the discarded card
@@ -207,9 +207,10 @@ message ProtoLvLeCardSelection {
 // 8 - Princess : `()`
 message ProtoLvLeCardOutcome {
     // Set to null for 2,4,6,7,8
-    reserved 2, 4, 6, 7, 8;
+    reserved 4, 6, 7, 8;
     oneof inner {
         ProtoGuardOutcome guard = 1;
+        ProtoPriestOutcome priest = 2;
         ProtoBaronOutcome baron = 3;
         ProtoPrinceOutcome prince = 5;
     }
@@ -217,9 +218,17 @@ message ProtoLvLeCardOutcome {
     message ProtoGuardOutcome {
         bool correct = 1;
     }
+    message ProtoPriestOutcome {
+        // None => you are not allowed to see it
+        // Some => you are allowed to see it
+        ProtoLvLeCard opt_opponent_card = 1;
+    }
     message ProtoBaronOutcome {
-        string losing_player_id = 1;
-        ProtoLvLeCard losing_player_card = 2;
+        ProtoBaronLoserInfo opt_loser_info = 1;
+        message ProtoBaronLoserInfo {
+            string losing_player_id = 1;
+            ProtoLvLeCard losing_player_card = 2;
+        }
     }
     message ProtoPrinceOutcome {
         ProtoLvLeCard discarded_card = 1;

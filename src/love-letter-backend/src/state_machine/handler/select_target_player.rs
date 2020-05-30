@@ -32,13 +32,13 @@ impl LoveLetterStateMachine {
         round_data: RoundData,
         staged_play: StagedPlay,
     ) -> LoveLetterState {
-        // Is my turn
+        // Check: Is my turn
         if client_player_id != round_data.players.current_turn_player_id() {
             self.streams.send_err(&client_player_id, Status::failed_precondition("Can't select target player, not your turn"));
             return LoveLetterState::PlayStaging(round_data, staged_play);
         }
 
-        // Check selected player is still in game
+        // Check: selected player is still in game
         if !round_data.players.remaining_player_ids().contains(&target_player_id) {
             self.streams.send_err(&client_player_id, Status::failed_precondition("Selected player is not in the round."));
             return LoveLetterState::PlayStaging(round_data, staged_play);
@@ -61,7 +61,7 @@ impl LoveLetterStateMachine {
             }
         }
 
-        // Check selected player is not Handmaid
+        // Check: selected player is not Handmaid
         if round_data.handmaid_immunity_player_ids.contains(&target_player_id) {
             self.streams.send_err(&client_player_id, Status::failed_precondition("Selected player is Handmaid."));
             return LoveLetterState::PlayStaging(round_data, staged_play);

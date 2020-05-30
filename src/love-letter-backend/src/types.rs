@@ -57,10 +57,8 @@ pub enum CommittedPlayOutcome {
     },
     Baron {
         target_player_id: String,
-        eliminated_player_id: Option<String>,
-        // Player-specific:
-        committer_card: Card,
-        opponent_card: Card,
+        eliminated_player_id_and_card: Option<(String, Card)>,
+        // No player-specific info. Losing player will not know winning player's card.
     },
     Handmaid,
     Prince {

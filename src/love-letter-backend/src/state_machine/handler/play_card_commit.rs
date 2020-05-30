@@ -107,19 +107,17 @@ impl LoveLetterStateMachine {
                 let other_card = round_data.players.get_card(&target_player_id)
                     .expect("Game is in unrecoverable, invalid state: Player targeted another player who isn't in round.");
 
-                let eliminated_player_id = if client_card > other_card {
-                    Some(target_player_id.clone())
+                let eliminated_player_id_and_card = if client_card > other_card {
+                    Some((target_player_id.clone(), other_card))
                 } else if client_card < other_card {
-                    Some(client_player_id.clone())
+                    Some((client_player_id.clone(), client_card))
                 } else {
                     None
                 };
 
                 CommittedPlayOutcome::Baron {
                     target_player_id,
-                    eliminated_player_id,
-                    committer_card: client_card,
-                    opponent_card: other_card,
+                    eliminated_player_id_and_card,
                 }
             },
             Card::Handmaid => {
@@ -224,8 +222,8 @@ impl CommittedPlay {
                     None
                 }
             },
-            CommittedPlayOutcome::Baron { eliminated_player_id, .. } => {
-                eliminated_player_id.as_ref()
+            CommittedPlayOutcome::Baron { eliminated_player_id_and_card, .. } => {
+                eliminated_player_id_and_card.as_ref().map(|x| &x.0)
             },
             CommittedPlayOutcome::Prince { target_player_id, discarded_card: Card::Princess, } => {
                 Some(&target_player_id)

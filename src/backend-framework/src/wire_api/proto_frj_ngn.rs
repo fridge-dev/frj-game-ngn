@@ -282,7 +282,7 @@ pub mod proto_lv_le_card_selection {
 }
 /// Publicly broadcasted data after playing a card:
 /// 1 - Guard    : `(bool)` - was guess correct
-/// 2 - Priest   : `()`
+/// 2 - Priest   : `(String)` - opponent's card (player-specific)
 /// 3 - Baron    : `(String, Card)` - the player+card that was knocked out
 /// 4 - Handmaid : `()`
 /// 5 - Prince   : `(Card)` - the discarded card
@@ -291,7 +291,7 @@ pub mod proto_lv_le_card_selection {
 /// 8 - Princess : `()`
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLvLeCardOutcome {
-    #[prost(oneof = "proto_lv_le_card_outcome::Inner", tags = "1, 3, 5")]
+    #[prost(oneof = "proto_lv_le_card_outcome::Inner", tags = "1, 2, 3, 5")]
     pub inner: ::std::option::Option<proto_lv_le_card_outcome::Inner>,
 }
 pub mod proto_lv_le_card_outcome {
@@ -301,11 +301,25 @@ pub mod proto_lv_le_card_outcome {
         pub correct: bool,
     }
     #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoPriestOutcome {
+        /// None => you are not allowed to see it
+        /// Some => you are allowed to see it
+        #[prost(enumeration = "super::ProtoLvLeCard", tag = "1")]
+        pub opt_opponent_card: i32,
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct ProtoBaronOutcome {
-        #[prost(string, tag = "1")]
-        pub losing_player_id: std::string::String,
-        #[prost(enumeration = "super::ProtoLvLeCard", tag = "2")]
-        pub losing_player_card: i32,
+        #[prost(message, optional, tag = "1")]
+        pub opt_loser_info: ::std::option::Option<proto_baron_outcome::ProtoBaronLoserInfo>,
+    }
+    pub mod proto_baron_outcome {
+        #[derive(Clone, PartialEq, ::prost::Message)]
+        pub struct ProtoBaronLoserInfo {
+            #[prost(string, tag = "1")]
+            pub losing_player_id: std::string::String,
+            #[prost(enumeration = "super::super::ProtoLvLeCard", tag = "2")]
+            pub losing_player_card: i32,
+        }
     }
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct ProtoPrinceOutcome {
@@ -316,6 +330,8 @@ pub mod proto_lv_le_card_outcome {
     pub enum Inner {
         #[prost(message, tag = "1")]
         Guard(ProtoGuardOutcome),
+        #[prost(message, tag = "2")]
+        Priest(ProtoPriestOutcome),
         #[prost(message, tag = "3")]
         Baron(ProtoBaronOutcome),
         #[prost(message, tag = "5")]

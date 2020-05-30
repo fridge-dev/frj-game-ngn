@@ -1,8 +1,9 @@
 use crate::events::{Card, PlayCardSource};
-use crate::types::{StagedPlay, CommittedPlayOutcome};
+use crate::types::{StagedPlay, CommittedPlayOutcome, CommittedPlay};
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeCard, ProtoLvLeCommittedPlay, ProtoLvLeCardSelection, proto_lv_le_card_selection};
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_play_card_req::ProtoLvLeCardSource;
-use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{ProtoGuardOutcome, ProtoBaronOutcome, ProtoPrinceOutcome};
+use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::{ProtoGuardOutcome, ProtoBaronOutcome, ProtoPrinceOutcome, ProtoPriestOutcome};
+use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_card_outcome::proto_baron_outcome::ProtoBaronLoserInfo;
 use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_card_selection::{ProtoGuardSelection, ProtoPriestSelection, ProtoBaronSelection, ProtoPrinceSelection, ProtoKingSelection};
 use std::convert::TryFrom;
 
@@ -51,10 +52,9 @@ impl From<Card> for ProtoLvLeCard {
     }
 }
 
-impl From<CommittedPlayOutcome> for ProtoLvLeCommittedPlay {
-    fn from(committed_play: CommittedPlayOutcome) -> Self {
-        // TODO:1 fix conversion. Proto model wasn't updated after adding some fields to the app layer classes.
-        match committed_play {
+impl CommittedPlay {
+    pub fn into_proto(self, requesting_player_id: &String) -> ProtoLvLeCommittedPlay {
+        match self.outcome {
             CommittedPlayOutcome::Guard { target_player_id, guessed_card, correct } => {
                 let selection = ProtoGuardSelection {
                     opt_player_id: target_player_id,
@@ -71,20 +71,32 @@ impl From<CommittedPlayOutcome> for ProtoLvLeCommittedPlay {
                     opt_player_id: target_player_id
                 };
 
-                ProtoLvLeCommittedPlay::from(selection)
+                let opt_opponent_card = if requesting_player_id == &self.committer_player_id {
+                    ProtoLvLeCard::from(opponent_card) as i32
+                } else {
+                    0
+                };
+
+                let outcome = ProtoPriestOutcome {
+                    opt_opponent_card,
+                };
+
+                ProtoLvLeCommittedPlay::from((selection, outcome))
             },
             CommittedPlayOutcome::Baron {
                 target_player_id,
-                eliminated_player_id,
-                committer_card,
-                opponent_card
+                eliminated_player_id_and_card,
             } => {
                 let selection = ProtoBaronSelection {
                     opt_player_id: target_player_id
                 };
+                let opt_loser_info = eliminated_player_id_and_card
+                    .map(|(losing_player_id, card)| ProtoBaronLoserInfo {
+                        losing_player_id,
+                        losing_player_card: ProtoLvLeCard::from(card) as i32,
+                    });
                 let outcome = ProtoBaronOutcome {
-                    losing_player_id: eliminated_player_id.expect("TODO:3 don't panic in a From"),
-                    losing_player_card: ProtoLvLeCard::from(Card::Guard) as i32
+                    opt_loser_info,
                 };
 
                 ProtoLvLeCommittedPlay::from((selection, outcome))
