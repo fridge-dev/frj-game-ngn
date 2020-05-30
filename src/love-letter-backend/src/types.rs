@@ -172,7 +172,7 @@ impl Players {
     }
 
     /// Must be done as atomic operation
-    pub fn eliminate_and_increment_turn(&mut self, player_id: &String) -> Card {
+    pub fn eliminate_and_increment_turn(&mut self, player_id: &str) -> Card {
         let index_to_remove = {
             let mut index_to_remove = None;
             for (i, item) in self.turn_order.iter().enumerate() {
@@ -188,9 +188,7 @@ impl Players {
 
         // If we removed an item before the current cursor position, then no need to increment
         // the cursor. The same cursor position will now refer to the next element.
-        //
-        // TODO:2 pretty sure this `if` conditional is wrong. Fix it.
-        if self.turn_cursor <= index_to_remove {
+        if self.turn_cursor < index_to_remove {
             // This must be called AFTER modifying `self.turn_order` above
             self.turn_cursor += 1;
         }

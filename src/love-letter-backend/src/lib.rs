@@ -5,6 +5,9 @@ mod state_machine;
 mod types;
 mod type_converters;
 
+#[cfg(test)]
+mod types_test;
+
 use crate::events::{LoveLetterEvent, LoveLetterEventType};
 use crate::state_machine::{LoveLetterState, LoveLetterStateMachine};
 use crate::types::RoundData;
