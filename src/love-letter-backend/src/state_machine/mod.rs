@@ -34,7 +34,7 @@ pub enum LoveLetterState {
     PlayStaging(RoundData, StagedPlay),
     TurnIntermission(RoundData, CommittedPlay),
     RoundIntermission(RoundResult),
-    // TODO:2 - `GameComplete(())`,
+    // TODO:3 - `GameComplete(())`, or we could just let players play rounds endlessly :D
 }
 
 /// A state machine executor. It operates on states as inputs/outputs, not owned data.

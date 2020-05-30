@@ -1,5 +1,5 @@
 use crate::deck;
-use crate::events::{Card, PlayCardSource};
+use crate::events::Card;
 use std::collections::{HashMap, HashSet};
 
 // ---------------- struct defs --------------------
@@ -33,7 +33,6 @@ pub struct Players {
 #[derive(Clone)]
 pub struct StagedPlay {
     pub played_card: Card,
-    pub source: PlayCardSource,
     pub target_player: Option<String>,
     pub target_card: Option<Card>,
 }
@@ -117,17 +116,6 @@ impl RoundData {
             play_history,
             most_recent_play_details: None,
             handmaid_immunity_player_ids: HashSet::new(),
-        }
-    }
-
-    pub fn get_card_to_stage(&self, player_id: &String, card_source: &PlayCardSource) -> Card {
-        match card_source {
-            PlayCardSource::Hand => self.players
-                .get_card(player_id)
-                .expect("Player attempted to stage card without being in round."),
-            PlayCardSource::TopDeck => *self.deck
-                .last()
-                .expect("Player attempted to stage card with empty deck."),
         }
     }
 }
@@ -228,10 +216,9 @@ impl Players {
 }
 
 impl StagedPlay {
-    pub fn new(played_card: Card, source: PlayCardSource) -> Self {
+    pub fn new(played_card: Card) -> Self {
         StagedPlay {
             played_card,
-            source,
             target_player: None,
             target_card: None
         }

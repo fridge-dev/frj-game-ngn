@@ -1,4 +1,4 @@
-use crate::events::{Card, PlayCardSource};
+use crate::events::Card;
 use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
 use crate::types::{RoundResult, RoundData, StagedPlay, CommittedPlay, CommittedPlayOutcome};
 use tonic::Status;
@@ -21,13 +21,18 @@ impl LoveLetterStateMachine {
         }
     }
 
-    /// 1: Mutate game state
-    ///     a. Perform action
-    ///     b. Eliminate player
-    /// 2: State transition:
-    ///     * TurnIntermission, OR
-    ///     * RoundIntermission, OR
-    ///     * GameEnd
+    /// Assumed pre-requisites:
+    /// * Players hand has been "cycled" (drawn new card)
+    /// * Players played card has been appended to play history
+    /// * Handmaid status is cleared
+    ///
+    /// Logic:
+    /// 1: Validate action has selections
+    /// 2. Update player hands (if needed)
+    /// 3. Create and set most recent play details
+    /// 4. Eliminate player
+    /// 5. Increment turn counter
+    /// 6: State transition: TurnIntermission OR RoundIntermission
     fn handle_commit(
         &mut self,
         mut round_data: RoundData,
@@ -44,37 +49,10 @@ impl LoveLetterStateMachine {
             return failed_precondition("Can't commit play, not your turn", round_data, staged_play);
         }
 
-        // Clear self from Handmaids (played from previous turn) after we validate it's our turn.
-        // This is idempotent, so it's fine to happen before input validation. Also it's required
-        // to have it before input validation, because round state is mutated during input
-        // validation.
-        round_data.handmaid_immunity_player_ids.remove(&client_player_id);
-
-        // Sanity check: Deck is not empty
-        let top_deck = round_data.deck.pop()
-            .expect("Player should not be able to commit if round is over.");
-
-        // Sanity check: Played card source is valid
-        assert_eq!(
-            staged_play.played_card,
-            round_data.get_card_to_stage(&client_player_id, &staged_play.source),
-            "Illegal game state: Staged play and card source have different."
-        );
-
-        // Discard current player's card and cycle new card
-        // TODO:1 do this during staging
-        let played_card = match staged_play.source {
-            PlayCardSource::Hand => round_data.players.replace_card(client_player_id.clone(), top_deck),
-            PlayCardSource::TopDeck => top_deck,
-        };
-
-        // Append to play history
-        round_data.play_history.push(played_card);
-
         // Do the following:
         // 0. Validate staged play
         // 1. Create new commit snapshot of the outcome
-        // 2. Mutate round state (player hands, play history)
+        // 2. Mutate player hands
         //
         // Do NOT do the following:
         // * Eliminate player
@@ -193,6 +171,7 @@ impl LoveLetterStateMachine {
             },
         }
 
+        // State transition
         let to_state = if round_data.players.remaining_player_ids().len() < 2 {
             LoveLetterState::RoundIntermission(self.complete_round(round_data))
             // TODO:1 new API to start next round
@@ -201,6 +180,7 @@ impl LoveLetterStateMachine {
             // TODO:1 new API to start next round
         } else {
             LoveLetterState::TurnIntermission(round_data, committed_play)
+            // TODO:1 new API to start next turn
         };
 
         // Last thing: send result to all players
