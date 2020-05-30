@@ -22,6 +22,7 @@ message ProtoLoveLetterDataIn {
         ProtoLvLeSelectTargetPlayer select_target_player = 5;
         ProtoLvLeSelectTargetCard select_target_card = 6;
         ProtoLvLeCommitSelectionReq commit_selection = 7;
+        ProtoGameDataReadyUpClick ready_up = 8;
     }
 }
 
@@ -70,15 +71,21 @@ message ProtoLvLeGameState {
         oneof turn {
             ProtoLvLeCard my_drawn_card = 3;
             string current_turn_player_id = 4;
+            ProtoLvLeTurnIntermissionState turn_intermission = 5;
         }
-        ProtoLvLeCardSelection staged_play = 5;
-        ProtoLvLeCommittedPlay most_recent_committed_play = 6;
-        repeated ProtoLvLeCard play_history = 7;
+        ProtoLvLeCardSelection staged_play = 6;
+        ProtoLvLeCommittedPlay most_recent_committed_play = 7;
+        repeated ProtoLvLeCard play_history = 8;
+    }
+
+    message ProtoLvLeTurnIntermissionState {
+        repeated string unready_player_ids = 1;
     }
 
     message ProtoLvLeResultState {
         // Sparse map, missing value => player eliminated
         map<string, ProtoLvLeCard> final_cards = 1;
+        repeated string unready_player_ids = 2;
     }
 }
 

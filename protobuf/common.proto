@@ -24,3 +24,7 @@ message ProtoGameDataHandshake {
 message ProtoGameDataStateReq {
     // Empty: This means "send me the latest state for the game stream I have opened".
 }
+
+message ProtoGameDataReadyUpClick {
+    // Empty: Player clicks "ready" button on various screen.
+}

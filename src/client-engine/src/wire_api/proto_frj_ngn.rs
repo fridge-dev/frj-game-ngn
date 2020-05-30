@@ -11,6 +11,9 @@ pub struct ProtoGameDataHandshake {
 /// Empty: This means "send me the latest state for the game stream I have opened".
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoGameDataStateReq {}
+/// Empty: Player clicks "ready" button on various screen.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProtoGameDataReadyUpClick {}
 // ======================================================
 // Common types needed for all games.
 // ======================================================
@@ -34,7 +37,7 @@ pub struct ProtoLoveLetterDataIn {
     /// The actual message
     #[prost(
         oneof = "proto_love_letter_data_in::ProtoLvLeIn",
-        tags = "2, 3, 4, 5, 6, 7"
+        tags = "2, 3, 4, 5, 6, 7, 8"
     )]
     pub proto_lv_le_in: ::std::option::Option<proto_love_letter_data_in::ProtoLvLeIn>,
 }
@@ -54,6 +57,8 @@ pub mod proto_love_letter_data_in {
         SelectTargetCard(super::ProtoLvLeSelectTargetCard),
         #[prost(message, tag = "7")]
         CommitSelection(super::ProtoLvLeCommitSelectionReq),
+        #[prost(message, tag = "8")]
+        ReadyUp(super::ProtoGameDataReadyUpClick),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -119,13 +124,13 @@ pub mod proto_lv_le_game_state {
         pub remaining_player_ids: ::std::vec::Vec<std::string::String>,
         #[prost(enumeration = "super::ProtoLvLeCard", tag = "2")]
         pub my_hand: i32,
-        #[prost(message, optional, tag = "5")]
-        pub staged_play: ::std::option::Option<super::ProtoLvLeCardSelection>,
         #[prost(message, optional, tag = "6")]
+        pub staged_play: ::std::option::Option<super::ProtoLvLeCardSelection>,
+        #[prost(message, optional, tag = "7")]
         pub most_recent_committed_play: ::std::option::Option<super::ProtoLvLeCommittedPlay>,
-        #[prost(enumeration = "super::ProtoLvLeCard", repeated, tag = "7")]
+        #[prost(enumeration = "super::ProtoLvLeCard", repeated, tag = "8")]
         pub play_history: ::std::vec::Vec<i32>,
-        #[prost(oneof = "proto_lv_le_round_state::Turn", tags = "3, 4")]
+        #[prost(oneof = "proto_lv_le_round_state::Turn", tags = "3, 4, 5")]
         pub turn: ::std::option::Option<proto_lv_le_round_state::Turn>,
     }
     pub mod proto_lv_le_round_state {
@@ -135,13 +140,22 @@ pub mod proto_lv_le_game_state {
             MyDrawnCard(i32),
             #[prost(string, tag = "4")]
             CurrentTurnPlayerId(std::string::String),
+            #[prost(message, tag = "5")]
+            TurnIntermission(super::ProtoLvLeTurnIntermissionState),
         }
+    }
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct ProtoLvLeTurnIntermissionState {
+        #[prost(string, repeated, tag = "1")]
+        pub unready_player_ids: ::std::vec::Vec<std::string::String>,
     }
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct ProtoLvLeResultState {
         /// Sparse map, missing value => player eliminated
         #[prost(map = "string, enumeration(super::ProtoLvLeCard)", tag = "1")]
         pub final_cards: ::std::collections::HashMap<std::string::String, i32>,
+        #[prost(string, repeated, tag = "2")]
+        pub unready_player_ids: ::std::vec::Vec<std::string::String>,
     }
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Stage {
