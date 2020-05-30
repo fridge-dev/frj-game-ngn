@@ -42,9 +42,9 @@ impl LoveLetterStateMachine {
 
                 let card_to_stage = round_data.get_card_to_stage(&player_id, &card_source);
 
-                // TODO validate Countess condition
+                // TODO:1 validate Countess condition
 
-                // TODO if selection not-needed, auto-commit
+                // TODO:2 if selection not-needed, auto-commit
 
                 LoveLetterState::PlayStaging(round_data, StagedPlay::new(card_to_stage, card_source))
             },

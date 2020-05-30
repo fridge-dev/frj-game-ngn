@@ -53,8 +53,8 @@ impl GameRepository for DefaultGameRepository {
     fn register_pregame_stream(&mut self, player_id: String, game: GameIdentifier, stream_out: StreamSender<ProtoPreGameMessage>) {
         match self.unstarted_games.get_mut(&game) {
             None => {
-                // TODO check race condition if game started while player in match disconnected
-                // TODO notify caller of NotFound
+                // TODO:2 check race condition if game started while player in match disconnected
+                // TODO:2 notify caller of NotFound
             },
             Some(pre_game_instance_manager) => {
                 println!("INFO: Player '{}' joining game '{}'", player_id, game.game_id);
@@ -68,7 +68,7 @@ impl GameRepository for DefaultGameRepository {
         let pre_game_instance_manager = match self.unstarted_games.remove(&game_id) {
             Some(instance_manager) => instance_manager,
             None => {
-                // TODO idempotency check
+                // TODO:2 idempotency check
                 let _ = response_sender.send(Err(Status::not_found(format!(
                     "{} Game ID '{}' does not exist or is already in progress.",
                     game_id.game_type,
@@ -99,7 +99,7 @@ impl GameRepository for DefaultGameRepository {
         println!("DEBUG: DefaultGameRepository received {:?}", event);
 
         if let Some(game) = self.love_letter_instances.get_mut(&event.client_info.game_id) {
-            // TODO this unnecessarily leaks `game_id` into individual instance managers
+            // TODO:3 this unnecessarily leaks `game_id` into individual instance managers
             game.handle_event(event);
         } else if let LoveLetterEventType::RegisterDataStream(stream) = event.payload {
             let _ = stream.send_error_message(Status::not_found(format!("Game {} not found", event.client_info.game_id)));

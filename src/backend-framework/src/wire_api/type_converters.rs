@@ -115,7 +115,7 @@ mod normal_converters {
         fn from(handshake: ProtoGameDataHandshake) -> Self {
             if handshake.game_type != ProtoGameType::LoveLetter as i32 {
                 println!("INFO: Invalid game type in Handshake message. Panicking because this is a dead branch that will be deleted soon.");
-                panic!("TODO clean this up");
+                panic!("TODO:2 clean this up by removing game type");
             }
 
             ClientInfo {

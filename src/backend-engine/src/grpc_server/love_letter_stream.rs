@@ -156,10 +156,9 @@ impl LoveLetterStreamMessageHandler {
     }
 
     fn notify_client_invalid_message(&self, status: Status) {
-        // TODO: notify client that `messageId` was invalid.
         // Close stream? Drop message? Idk.
         println!("Client sent invalid message to data stream. Sending err {:?}", status);
-        unimplemented!("TODO notify client of invalid message")
+        unimplemented!("TODO:3 notify client that `messageId` was invalid")
     }
 }
 

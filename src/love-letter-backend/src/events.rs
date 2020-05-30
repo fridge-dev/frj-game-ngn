@@ -4,7 +4,7 @@ use backend_framework::wire_api::proto_frj_ngn::ProtoLoveLetterDataOut;
 
 #[derive(Debug)]
 pub struct LoveLetterEvent {
-    // TODO this unnecessarily leaks `game_id` into individual instance managers
+    // TODO:3 this unnecessarily leaks `game_id` into individual instance managers
     pub client_info: ClientInfo,
     pub payload: LoveLetterEventType,
 }

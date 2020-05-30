@@ -53,7 +53,7 @@ impl From<Card> for ProtoLvLeCard {
 
 impl From<CommittedPlayOutcome> for ProtoLvLeCommittedPlay {
     fn from(committed_play: CommittedPlayOutcome) -> Self {
-        // TODO fix
+        // TODO:1 fix conversion. Proto model wasn't updated after adding some fields to the app layer classes.
         match committed_play {
             CommittedPlayOutcome::Guard { target_player_id, guessed_card, correct } => {
                 let selection = ProtoGuardSelection {
@@ -83,7 +83,7 @@ impl From<CommittedPlayOutcome> for ProtoLvLeCommittedPlay {
                     opt_player_id: target_player_id
                 };
                 let outcome = ProtoBaronOutcome {
-                    losing_player_id: eliminated_player_id.expect("TODO don't"),
+                    losing_player_id: eliminated_player_id.expect("TODO:3 don't panic in a From"),
                     losing_player_card: ProtoLvLeCard::from(Card::Guard) as i32
                 };
 

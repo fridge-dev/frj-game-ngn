@@ -27,7 +27,7 @@ pub mod wrapper {
             })
         }
 
-        // TODO abstract away the tonic dependency
+        // TODO:3 abstract away the tonic dependency
         pub async fn host_game(&mut self, req: ProtoHostGameReq) -> Result<Streaming<ProtoPreGameMessage>, Status> {
             self.inner_client
                 .host_game(req)

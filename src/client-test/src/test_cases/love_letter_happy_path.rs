@@ -51,7 +51,7 @@ pub async fn run(config: Config) -> Result<(), Box<dyn Error>> {
         game_type: ProtoGameType::LoveLetter as i32,
     }));
 
-    // TODO implement full game
+    // TODO:2 implement full game
     let _ = rcv1.recv_data("p1 msg1").await;
     let _ = rcv2.recv_data("p2 msg1").await;
     let _ = rcv3.recv_data("p3 msg1").await;

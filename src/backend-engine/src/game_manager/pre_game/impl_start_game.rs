@@ -22,7 +22,7 @@ impl PreGameInstanceManager {
             return Err(self);
         }
 
-        // TODO check for disconnects
+        // TODO:3 check for disconnects
 
         // Not enough players
         if self.players.count() < self.min_players {

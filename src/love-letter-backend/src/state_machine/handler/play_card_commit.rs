@@ -62,7 +62,7 @@ impl LoveLetterStateMachine {
         );
 
         // Discard current player's card and cycle new card
-        // TODO do this during staging
+        // TODO:1 do this during staging
         let played_card = match staged_play.source {
             PlayCardSource::Hand => round_data.players.replace_card(client_player_id.clone(), top_deck),
             PlayCardSource::TopDeck => top_deck,
@@ -195,10 +195,10 @@ impl LoveLetterStateMachine {
 
         let to_state = if round_data.players.remaining_player_ids().len() < 2 {
             LoveLetterState::RoundIntermission(self.complete_round(round_data))
-            // TODO new API to start next round
+            // TODO:1 new API to start next round
         } else if round_data.deck.len() < 2 {
             LoveLetterState::RoundIntermission(self.complete_round(round_data))
-            // TODO new API to start next round
+            // TODO:1 new API to start next round
         } else {
             LoveLetterState::TurnIntermission(round_data, committed_play)
         };
