@@ -2,5 +2,6 @@
 mod send_game_state;
 mod play_card_commit;
 mod play_card_staged;
+mod ready_up;
 mod select_target_player;
 mod select_target_card;

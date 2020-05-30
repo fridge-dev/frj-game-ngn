@@ -1,7 +1,7 @@
 use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
-use crate::types::{GameData, RoundData, RoundResult};
+use crate::types::{GameData, RoundData, RoundResult, UnreadyPlayers};
 use backend_framework::wire_api::proto_frj_ngn::{ProtoLvLeGameState, ProtoLvLeCard, ProtoLvLeCardSelection};
-use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState, proto_lv_le_round_state};
+use backend_framework::wire_api::proto_frj_ngn::proto_lv_le_game_state::{ProtoLvLeRoundState, ProtoLvLePlayer, Stage, ProtoLvLeResultState, proto_lv_le_round_state, ProtoLvLeTurnIntermissionState};
 use std::collections::HashMap;
 
 impl LoveLetterStateMachine {
@@ -53,31 +53,39 @@ fn into_proto_stage(state: &LoveLetterState, player_id: &String) -> Stage {
         LoveLetterState::PlayPending(round_data) => Stage::RoundInProgress(
             into_proto_round_state(
                 round_data,
-                None,
                 player_id,
+                None,
+                None,
             )
         ),
         LoveLetterState::PlayStaging(round_data, staged) => Stage::RoundInProgress(
             into_proto_round_state(
                 round_data,
+                player_id,
                 Some(ProtoLvLeCardSelection::from(staged.clone())),
-                player_id
+                None,
             )
         ),
-        LoveLetterState::TurnIntermission(round_data) => Stage::RoundInProgress(
+        LoveLetterState::TurnIntermission(round_data, unready_players) => Stage::RoundInProgress(
             into_proto_round_state(
                 round_data,
+                player_id,
                 None,
-                player_id
+                Some(unready_players.clone())
             )
         ),
-        LoveLetterState::RoundIntermission(round_result) => Stage::RoundIntermission(
-            into_proto_result_state(round_result)
+        LoveLetterState::RoundIntermission(round_result, unready_players) => Stage::RoundIntermission(
+            into_proto_result_state(round_result.clone(), unready_players.clone().into_inner())
         ),
     }
 }
 
-fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeCardSelection>, my_player_id: &String) -> ProtoLvLeRoundState {
+fn into_proto_round_state(
+    round_data: &RoundData,
+    my_player_id: &String,
+    staged_play: Option<ProtoLvLeCardSelection>,
+    opt_unready_players: Option<UnreadyPlayers>,
+) -> ProtoLvLeRoundState {
     let remaining_player_ids = round_data.players.remaining_player_ids().clone();
     let my_hand: i32 = match round_data.players.get_card(my_player_id) {
         None => 0,
@@ -93,15 +101,24 @@ fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeC
         .map(|card| ProtoLvLeCard::from(*card) as i32)
         .collect();
 
-    let turn: Option<proto_lv_le_round_state::Turn> = if my_player_id == round_data.players.current_turn_player_id() {
-        round_data.deck
-            .last()
-            .map(|c| ProtoLvLeCard::from(*c) as i32)
-            .map(|i| proto_lv_le_round_state::Turn::MyDrawnCard(i))
-    } else {
-        Some(proto_lv_le_round_state::Turn::CurrentTurnPlayerId(
-            round_data.players.current_turn_player_id().to_string()
-        ))
+    let is_my_turn = my_player_id == round_data.players.current_turn_player_id();
+    let turn: Option<proto_lv_le_round_state::Turn> = match (opt_unready_players, is_my_turn) {
+        (Some(unready_players), _) => {
+            Some(proto_lv_le_round_state::Turn::TurnIntermission(ProtoLvLeTurnIntermissionState {
+                unready_player_ids: unready_players.into_inner()
+            }))
+        }
+        (None, true) => {
+            round_data.deck
+                .last()
+                .map(|c| ProtoLvLeCard::from(*c) as i32)
+                .map(|i| proto_lv_le_round_state::Turn::MyDrawnCard(i))
+        },
+        (None, false) => {
+            Some(proto_lv_le_round_state::Turn::CurrentTurnPlayerId(
+                round_data.players.current_turn_player_id().to_string()
+            ))
+        },
     };
 
     ProtoLvLeRoundState {
@@ -114,13 +131,17 @@ fn into_proto_round_state(round_data: &RoundData, staged_play: Option<ProtoLvLeC
     }
 }
 
-fn into_proto_result_state(round_result: &RoundResult) -> ProtoLvLeResultState {
+fn into_proto_result_state(
+    round_result: RoundResult,
+    unready_player_ids: Vec<String>
+) -> ProtoLvLeResultState {
     let mut final_cards = HashMap::new();
-    for (player_id, card) in round_result.final_card_by_player_id.iter() {
-        final_cards.insert(player_id.clone(), ProtoLvLeCard::from(*card) as i32);
+    for (player_id, card) in round_result.final_card_by_player_id {
+        final_cards.insert(player_id, ProtoLvLeCard::from(card) as i32);
     }
 
     ProtoLvLeResultState {
         final_cards,
+        unready_player_ids,
     }
 }

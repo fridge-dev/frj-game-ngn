@@ -14,6 +14,7 @@ pub enum LoveLetterEventType {
     // Common
     RegisterDataStream(StreamSender<ProtoLoveLetterDataOut>),
     GetGameState,
+    ReadyUp,
 
     // Game-specific
     PlayCardStaged(PlayCardSource),

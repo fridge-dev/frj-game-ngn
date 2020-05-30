@@ -1,6 +1,6 @@
 use crate::events::Card;
 use crate::state_machine::{LoveLetterStateMachine, LoveLetterState};
-use crate::types::{RoundResult, RoundData, StagedPlay, CommittedPlay, CommittedPlayOutcome};
+use crate::types::{RoundResult, RoundData, StagedPlay, CommittedPlay, CommittedPlayOutcome, UnreadyPlayers};
 use tonic::Status;
 
 impl LoveLetterStateMachine {
@@ -172,19 +172,31 @@ impl LoveLetterStateMachine {
 
         // State transition
         let to_state = if round_data.players.remaining_player_ids().len() < 2 {
-            LoveLetterState::RoundIntermission(self.complete_round(round_data))
-            // TODO:1 new API to start next round
+            LoveLetterState::RoundIntermission(
+                self.complete_round(round_data),
+                self.unready_player_list()
+            )
         } else if round_data.deck.len() < 2 {
-            LoveLetterState::RoundIntermission(self.complete_round(round_data))
-            // TODO:1 new API to start next round
+            LoveLetterState::RoundIntermission(
+                self.complete_round(round_data),
+                self.unready_player_list()
+            )
         } else {
-            LoveLetterState::TurnIntermission(round_data)
-            // TODO:1 new API to start next turn
+            LoveLetterState::TurnIntermission(
+                round_data,
+                self.unready_player_list()
+            )
         };
 
         // Last thing: send result to all players
         self.send_game_state_to_all(&to_state);
         to_state
+    }
+
+    fn unready_player_list(&self) -> UnreadyPlayers {
+        // As a later optimization (to UX), we can make only subset of players ready-up. For now,
+        // we just require all players to ready up.
+        UnreadyPlayers::new(self.game_data.player_id_turn_order.clone())
     }
 
     fn complete_round(&mut self, round_data: RoundData) -> RoundResult {

@@ -73,9 +73,15 @@ pub enum CommittedPlayOutcome {
     Princess,
 }
 
+#[derive(Clone)]
 pub struct RoundResult {
     /// Sparse map, missing value => player eliminated
-    pub final_card_by_player_id: HashMap<String, Card>
+    pub final_card_by_player_id: HashMap<String, Card>,
+}
+
+#[derive(Clone)]
+pub struct UnreadyPlayers {
+    player_ids: Vec<String>,
 }
 
 // ---------------- impl blocks --------------------
@@ -236,5 +242,27 @@ impl RoundResult {
         RoundResult {
             final_card_by_player_id,
         }
+    }
+}
+
+impl UnreadyPlayers {
+    pub fn new(player_ids: Vec<String>) -> Self {
+        UnreadyPlayers {
+            player_ids,
+        }
+    }
+
+    pub fn ready_up(&mut self, player_id: &String) {
+        if let Some(pos) = self.player_ids.iter().position(|x| x == player_id) {
+            self.player_ids.remove(pos);
+        }
+    }
+
+    pub fn all_ready(&self) -> bool {
+        self.player_ids.is_empty()
+    }
+
+    pub fn into_inner(self) -> Vec<String> {
+        self.player_ids
     }
 }

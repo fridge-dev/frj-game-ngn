@@ -77,6 +77,9 @@ impl LoveLetterInstanceManager {
             LoveLetterEventType::PlayCardCommit => {
                 self.state_machine.play_card_commit(from_state, player_id)
             },
+            LoveLetterEventType::ReadyUp => {
+                self.state_machine.ready_up(from_state, player_id)
+            },
         }
     }
 }

@@ -152,6 +152,9 @@ impl LoveLetterStreamMessageHandler {
             ProtoLvLeIn::CommitSelection(_) => {
                 Ok(LoveLetterEventType::PlayCardCommit)
             },
+            ProtoLvLeIn::ReadyUp(_) => {
+                Ok(LoveLetterEventType::ReadyUp)
+            }
         }
     }
 
