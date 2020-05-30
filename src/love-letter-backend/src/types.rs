@@ -196,7 +196,9 @@ impl Players {
 
         // If we removed an item before the current cursor position, then no need to increment
         // the cursor. The same cursor position will now refer to the next element.
-        if index_to_remove < self.turn_cursor {
+        //
+        // TODO:2 pretty sure this `if` conditional is wrong. Fix it.
+        if self.turn_cursor <= index_to_remove {
             // This must be called AFTER modifying `self.turn_order` above
             self.turn_cursor += 1;
         }
