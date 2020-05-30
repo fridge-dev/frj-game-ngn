@@ -64,7 +64,7 @@ fn into_proto_stage(state: &LoveLetterState, player_id: &String) -> Stage {
                 player_id
             )
         ),
-        LoveLetterState::TurnIntermission(round_data, committed_play) => Stage::RoundInProgress(
+        LoveLetterState::TurnIntermission(round_data) => Stage::RoundInProgress(
             into_proto_round_state(
                 round_data,
                 None,

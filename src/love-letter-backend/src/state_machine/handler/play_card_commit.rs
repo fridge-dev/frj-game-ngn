@@ -158,7 +158,6 @@ impl LoveLetterStateMachine {
             committer_player_id: client_player_id,
             outcome: committed_play_outcome,
         };
-        round_data.most_recent_play_details.replace(committed_play.clone());
 
         // Eliminate player and increment turn cursor
         match committed_play.player_id_to_eliminate() {
@@ -169,6 +168,8 @@ impl LoveLetterStateMachine {
             },
         }
 
+        round_data.most_recent_play_details.replace(committed_play);
+
         // State transition
         let to_state = if round_data.players.remaining_player_ids().len() < 2 {
             LoveLetterState::RoundIntermission(self.complete_round(round_data))
@@ -177,7 +178,7 @@ impl LoveLetterStateMachine {
             LoveLetterState::RoundIntermission(self.complete_round(round_data))
             // TODO:1 new API to start next round
         } else {
-            LoveLetterState::TurnIntermission(round_data, committed_play)
+            LoveLetterState::TurnIntermission(round_data)
             // TODO:1 new API to start next turn
         };
 
