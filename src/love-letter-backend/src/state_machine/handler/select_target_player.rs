@@ -61,7 +61,11 @@ impl LoveLetterStateMachine {
             }
         }
 
-        // TODO Check selected player is not Handmaid
+        // Check selected player is not Handmaid
+        if round_data.handmaid_immunity_player_ids.contains(&target_player_id) {
+            self.streams.send_err(&client_player_id, Status::failed_precondition("Selected player is Handmaid."));
+            return LoveLetterState::PlayStaging(round_data, staged_play);
+        }
 
         // Apply update
         let mut staged_play = staged_play;

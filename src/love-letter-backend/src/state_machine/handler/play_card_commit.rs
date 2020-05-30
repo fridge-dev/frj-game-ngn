@@ -44,6 +44,12 @@ impl LoveLetterStateMachine {
             return failed_precondition("Can't commit play, not your turn", round_data, staged_play);
         }
 
+        // Clear self from Handmaids (played from previous turn) after we validate it's our turn.
+        // This is idempotent, so it's fine to happen before input validation. Also it's required
+        // to have it before input validation, because round state is mutated during input
+        // validation.
+        round_data.handmaid_immunity_player_ids.remove(&client_player_id);
+
         // Sanity check: Deck is not empty
         let top_deck = round_data.deck.pop()
             .expect("Player should not be able to commit if round is over.");
