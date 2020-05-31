@@ -130,6 +130,8 @@ impl LoggingStreamSender<ProtoLoveLetterDataIn> {
 
 // ------- LoggingGameClient --------
 
+pub type LoggingBiStream<I, O> = (LoggingStreamSender<I>, LoggingStreamRecv<O>);
+
 #[derive(Clone)]
 pub struct LoggingGameClient {
     inner: GameClient,
@@ -167,12 +169,12 @@ impl LoggingGameClient {
     }
 
     pub async fn open_love_letter_stream(&mut self) -> Result<
-        (LoggingStreamSender<ProtoLoveLetterDataIn>, LoggingStreamRecv<ProtoLoveLetterDataOut>),
+        LoggingBiStream<ProtoLoveLetterDataIn, ProtoLoveLetterDataOut>,
         Status
     > {
         self.log_request(&"OpenLoveLetterDataStream");
         let result = self.inner.open_love_letter_stream().await;
-        self.log_result(result.map(|(snd, rcv)| (self.make_stream_sender(snd), self.make_stream_recv(rcv))))
+        self.log_result(result.map(|(snd, rcv)| self.make_bi_stream(snd, rcv)))
     }
 
     fn log_request<I: Debug>(&self, req: &I) {
@@ -188,11 +190,22 @@ impl LoggingGameClient {
         result
     }
 
-    fn make_stream_recv<T: prost::Message>(&self, tonic_stream: Streaming<T>) -> LoggingStreamRecv<T> {
-        LoggingStreamRecv::new(tonic_stream, self.player_id.clone())
+    fn make_bi_stream<I: prost::Message, O: prost::Message>(
+        &self,
+        tx: mpsc::UnboundedSender<I>,
+        tonic_stream: Streaming<O>
+    ) -> LoggingBiStream<I, O> {
+        (
+            self.make_stream_sender(tx),
+            self.make_stream_recv(tonic_stream)
+        )
     }
 
     fn make_stream_sender<T: prost::Message>(&self, tx: mpsc::UnboundedSender<T>) -> LoggingStreamSender<T> {
         LoggingStreamSender::new(tx, self.player_id.clone())
+    }
+
+    fn make_stream_recv<T: prost::Message>(&self, tonic_stream: Streaming<T>) -> LoggingStreamRecv<T> {
+        LoggingStreamRecv::new(tonic_stream, self.player_id.clone())
     }
 }

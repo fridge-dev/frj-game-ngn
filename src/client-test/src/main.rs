@@ -14,11 +14,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     pass_fail("pre_game_stream", pre_game_stream::run(config).await);
 
-    let config = love_letter_happy_path::Config {
+    let config = love_letter_happy_path::runner::Config {
         game_id: game_id(),
         players: [player_id(), player_id(), player_id()],
     };
-    pass_fail("love_letter_happy_path", love_letter_happy_path::run(config).await);
+    pass_fail("love_letter_happy_path", love_letter_happy_path::runner::run(config).await);
 
     Ok(())
 }

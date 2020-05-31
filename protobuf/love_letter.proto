@@ -34,6 +34,7 @@ message ProtoLoveLetterDataOut {
     // The actual message
     oneof proto_lv_le_out {
         ProtoLvLeGameState game_state = 2;
+        // TODO:2.5 remove other possible game states
         ProtoLvLeTurnIndicatorRepl turn_indicator = 3;
         ProtoLvLePlayCardRepl play_card = 4;
         ProtoLvLeStageCardRepl stage_card = 5;
@@ -51,7 +52,7 @@ message ProtoLoveLetterDataOut {
 
 message ProtoLvLeGameState {
 
-    uint64 clock = 1;
+    uint64 clock = 1; // TODO:2.5 remove redundant field
     repeated ProtoLvLePlayer players = 2;
     oneof stage {
         ProtoLvLeRoundState round_in_progress = 3;
