@@ -12,6 +12,7 @@ use crate::events::{LoveLetterEvent, LoveLetterEventType};
 use crate::state_machine::{LoveLetterState, LoveLetterStateMachine};
 use crate::types::RoundData;
 use backend_framework::holder::Holder;
+use backend_framework::game_instance_manager::GameInstanceManager;
 
 /// This is the top level class for managing a single game of LoveLetter.
 ///
@@ -26,24 +27,11 @@ pub struct LoveLetterInstanceManager {
 
 impl LoveLetterInstanceManager {
 
-    pub fn new(player_ids: Vec<String>) -> Self {
+    fn new(player_ids: Vec<String>) -> Self {
         LoveLetterInstanceManager {
             state: Holder::new(LoveLetterState::PlayPending(RoundData::new(&player_ids))),
             state_machine: LoveLetterStateMachine::new(player_ids),
         }
-    }
-
-    /// This is the single entry point for manipulating the state of the game.
-    ///
-    /// Logic:
-    /// 1. Take ownership of current state from game instance
-    /// 2. Unwrap the incoming event (i.e. request)
-    /// 3. Route event payload to the correct state machine method
-    /// 4. Put current state back into game instance
-    pub fn handle_event(&mut self, event: LoveLetterEvent) {
-        let from_state = self.state.take();
-        let to_state = self.route_event_to_state_machine(from_state, event);
-        self.state.put(to_state);
     }
 
     /// State machine logic:
@@ -84,5 +72,28 @@ impl LoveLetterInstanceManager {
                 self.state_machine.ready_up(from_state, player_id)
             },
         }
+    }
+}
+
+impl GameInstanceManager<LoveLetterEvent> for LoveLetterInstanceManager {
+    fn create_new_game(player_ids: Vec<String>) -> Self {
+        LoveLetterInstanceManager::new(player_ids)
+    }
+
+    /// This is the single entry point for manipulating the state of the game.
+    ///
+    /// Logic:
+    /// 1. Take ownership of current state from game instance
+    /// 2. Unwrap the incoming event (i.e. request)
+    /// 3. Route event payload to the correct state machine method
+    /// 4. Put current state back into game instance
+    fn handle_event(&mut self, event: LoveLetterEvent) {
+        let from_state = self.state.take();
+        let to_state = self.route_event_to_state_machine(from_state, event);
+        self.state.put(to_state);
+    }
+
+    fn player_ids(&self) -> &Vec<String> {
+        self.state_machine.all_player_ids()
     }
 }

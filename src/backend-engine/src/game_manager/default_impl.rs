@@ -2,6 +2,7 @@ use crate::game_manager::api::GameRepository;
 use crate::game_manager::pre_game::PreGameInstanceManager;
 use crate::game_manager::types::{GameIdentifier, GameType};
 use crate::lost_cities_placeholder::{LostCitiesInstanceManager, LostCitiesEvent};
+use backend_framework::game_instance_manager::GameInstanceManager;
 use backend_framework::streaming::StreamSender;
 use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoStartGameReply};
 use love_letter_backend::LoveLetterInstanceManager;
@@ -12,6 +13,7 @@ use tonic::Status;
 
 /// Repository for holding instances of games.
 pub(crate) struct DefaultGameRepository {
+    // TODO:2.5 implement garbage collection
     unstarted_games: HashMap<GameIdentifier, PreGameInstanceManager>,
     love_letter_instances: HashMap<String, LoveLetterInstanceManager>,
     lost_cities_instances: HashMap<String, LostCitiesInstanceManager>,
@@ -27,13 +29,29 @@ impl DefaultGameRepository {
         }
     }
 
-    fn create_typed_game(&mut self, game: GameIdentifier, player_ids: Vec<String>) {
+    fn insert_new_game(&mut self, game: GameIdentifier, player_ids: Vec<String>) {
+        // TODO:2 check that game doesn't already exist
         match game.game_type {
             GameType::LoveLetter => {
-                self.love_letter_instances.insert(game.game_id, LoveLetterInstanceManager::new(player_ids));
+                self.love_letter_instances.insert(game.game_id, LoveLetterInstanceManager::create_new_game(player_ids));
             },
             GameType::LostCities => {
-                self.lost_cities_instances.insert(game.game_id, LostCitiesInstanceManager::new());
+                self.lost_cities_instances.insert(game.game_id, LostCitiesInstanceManager::create_new_game(player_ids));
+            },
+        }
+    }
+
+    fn get_player_ids_if_game_exists(&self, game: &GameIdentifier) -> Option<&Vec<String>> {
+        match game.game_type {
+            GameType::LoveLetter => {
+                self.love_letter_instances
+                    .get(&game.game_id)
+                    .map(|gim| gim.player_ids())
+            },
+            GameType::LostCities => {
+                self.lost_cities_instances
+                    .get(&game.game_id)
+                    .map(|gim| gim.player_ids())
             },
         }
     }
@@ -45,12 +63,19 @@ impl GameRepository for DefaultGameRepository {
     fn create_game(&mut self, game: GameIdentifier) {
         let game_type = game.game_type;
         println!("INFO: Creating game {:?}", game);
+        // TODO:2 ensure in-progress game doesn't exist with same ID
+        //        or does this not matter?
         self.unstarted_games
             .entry(game)
             .or_insert_with(|| PreGameInstanceManager::new(game_type));
     }
 
-    fn register_pregame_stream(&mut self, player_id: String, game: GameIdentifier, stream_out: StreamSender<ProtoPreGameMessage>) {
+    fn register_pregame_stream(
+        &mut self,
+        player_id: String,
+        game: GameIdentifier,
+        stream_out: StreamSender<ProtoPreGameMessage>
+    ) {
         match self.unstarted_games.get_mut(&game) {
             None => {
                 // TODO:2 check race condition if game started while player in match disconnected
@@ -63,17 +88,31 @@ impl GameRepository for DefaultGameRepository {
         }
     }
 
-    fn start_game(&mut self, player_id: String, game_id: GameIdentifier, response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>) {
+    fn start_game(
+        &mut self,
+        player_id: String,
+        game_id: GameIdentifier,
+        response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>
+    ) {
         // Pop the GIM out
         let pre_game_instance_manager = match self.unstarted_games.remove(&game_id) {
             Some(instance_manager) => instance_manager,
             None => {
-                // TODO:2 idempotency check
-                let _ = response_sender.send(Err(Status::not_found(format!(
-                    "{} Game ID '{}' does not exist or is already in progress.",
-                    game_id.game_type,
-                    game_id.game_id
-                ))));
+                // Idempotency check
+                let msg = self.get_player_ids_if_game_exists(&game_id)
+                    .filter(|player_ids| player_ids.contains(&player_id))
+                    // Re-send success without creating
+                    .map(|player_ids| ProtoStartGameReply {
+                        player_ids: player_ids.clone()
+                    })
+                    // Notify game not found
+                    .ok_or_else(|| Status::not_found(format!(
+                        "{} Game ID '{}' does not exist or is already in progress.",
+                        game_id.game_type,
+                        game_id.game_id
+                    )));
+                let _ = response_sender.send(msg);
+
                 return;
             },
         };
@@ -88,7 +127,7 @@ impl GameRepository for DefaultGameRepository {
         };
 
         // Create the specific type of game instance.
-        self.create_typed_game(game_id, player_ids);
+        self.insert_new_game(game_id, player_ids);
     }
 
     fn notify_game_state(&mut self, _player_id: String, _game: GameIdentifier) {

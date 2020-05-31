@@ -58,4 +58,8 @@ impl LoveLetterStateMachine {
     pub fn add_stream(&mut self, player_id: String, stream: StreamSender<ProtoLoveLetterDataOut>) {
         self.streams.add_stream(player_id, stream);
     }
+
+    pub fn all_player_ids(&self) -> &Vec<String> {
+        &self.game_data.player_id_turn_order
+    }
 }
