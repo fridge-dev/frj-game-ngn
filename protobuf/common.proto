@@ -18,7 +18,8 @@ enum ProtoGameType {
 message ProtoGameDataHandshake {
     string player_id = 1;
     string game_id = 2;
-    ProtoGameType game_type = 3;
+    // Game type not needed, since it can be inferred from the stream
+    // type that the message is contained in.
 }
 
 message ProtoGameDataStateReq {

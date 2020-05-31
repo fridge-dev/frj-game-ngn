@@ -3,10 +3,10 @@
 pub struct ProtoGameDataHandshake {
     #[prost(string, tag = "1")]
     pub player_id: std::string::String,
+    /// Game type not needed, since it can be inferred from the stream
+    /// type that the message is contained in.
     #[prost(string, tag = "2")]
     pub game_id: std::string::String,
-    #[prost(enumeration = "ProtoGameType", tag = "3")]
-    pub game_type: i32,
 }
 /// Empty: This means "send me the latest state for the game stream I have opened".
 #[derive(Clone, PartialEq, ::prost::Message)]

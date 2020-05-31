@@ -38,17 +38,14 @@ pub async fn run(config: Config) -> Result<(), Box<dyn Error>> {
     snd1.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
         player_id: p1.clone(),
         game_id: game_id.clone(),
-        game_type: ProtoGameType::LoveLetter as i32,
     }));
     snd2.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
         player_id: p2.clone(),
         game_id: game_id.clone(),
-        game_type: ProtoGameType::LoveLetter as i32,
     }));
     snd3.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
         player_id: p3.clone(),
         game_id: game_id.clone(),
-        game_type: ProtoGameType::LoveLetter as i32,
     }));
 
     // TODO:2 implement full game

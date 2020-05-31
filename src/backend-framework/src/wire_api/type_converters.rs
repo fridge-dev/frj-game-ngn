@@ -108,16 +108,11 @@ mod normal_converters {
     };
     use crate::wire_api::proto_frj_ngn::{
         proto_lv_le_card_outcome, proto_lv_le_card_selection, ProtoGameDataHandshake,
-        ProtoGameType, ProtoLvLeCardOutcome, ProtoLvLeCardSelection, ProtoLvLeCommittedPlay,
+        ProtoLvLeCardOutcome, ProtoLvLeCardSelection, ProtoLvLeCommittedPlay,
     };
 
     impl From<ProtoGameDataHandshake> for ClientInfo {
         fn from(handshake: ProtoGameDataHandshake) -> Self {
-            if handshake.game_type != ProtoGameType::LoveLetter as i32 {
-                println!("INFO: Invalid game type in Handshake message. Panicking because this is a dead branch that will be deleted soon.");
-                panic!("TODO:2 clean this up by removing game type");
-            }
-
             ClientInfo {
                 player_id: handshake.player_id,
                 game_id: handshake.game_id,
