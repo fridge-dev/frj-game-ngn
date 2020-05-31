@@ -62,7 +62,7 @@ impl ProtoFridgeGameEngine for FrjServer {
 
         // This currently relies on the assumption of serialized access, which I'm only like
         // 90% sure will always work as expected. Might have to properly synchronize this later.
-        self.game_repo_client.create_game(game.clone());
+        self.game_repo_client.create_pregame(game.clone());
         self.game_repo_client.register_pregame_stream(req.player_id, game, client_out);
 
         Ok(Response::new(rx))

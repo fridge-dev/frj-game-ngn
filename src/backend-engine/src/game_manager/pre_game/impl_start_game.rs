@@ -1,77 +1,61 @@
 use crate::game_manager::pre_game::PreGameInstanceManager;
-use backend_framework::wire_api::proto_frj_ngn::ProtoStartGameReply;
 use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::ProtoGameStartMsg;
-use tokio::sync::oneshot;
 use tonic::Status;
 
 impl PreGameInstanceManager {
 
-    /// Handle all actions to complete the "pre game" phase of the game, so
+    /// Handle all validation checks to complete the "pre-game" phase of the game, so
     /// we can move the game to in progress.
-    ///
-    /// Consumes `self` but passes back `Err(self)` if there was some reason
-    /// the game couldn't be started. Notifying clients is taken care of.
-    pub fn try_start_game(
-        mut self,
-        player_id: String,
-        response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>,
-    ) -> Result<Vec<String>, Self> {
-        if !self.is_party_leader(&player_id) {
-            println!("INFO: Non-party leader '{}' attempted to start game. Rejecting the call.", player_id);
-            let _ = response_sender.send(Err(Status::failed_precondition("You are not party leader.")));
-            return Err(self);
+    pub fn start_game_pre_check(&self, requesting_player_id: &String) -> Result<Vec<String>, Status> {
+        if !self.is_party_leader(requesting_player_id) {
+            println!("INFO: Non-party leader '{}' attempted to start game. Rejecting the call.", requesting_player_id);
+            return Err(Status::failed_precondition("You are not party leader."));
         }
-
-        // TODO:3 check for disconnects
 
         // Not enough players
         if self.players.count() < self.min_players {
-            let _ = response_sender.send(Err(Status::failed_precondition("Not enough players.")));
-            return Err(self);
+            println!(
+                "INFO: Attempted to start game '{:?}' with only '{}' players. Rejecting the call.",
+                self.game_type,
+                self.players.count()
+            );
+            return Err(Status::failed_precondition("Not enough players."));
         }
 
-        // Notify all players' streams that game is starting
-        let player_ids = self.players.player_ids();
-        if let Err(_) = self.notify_all_players(response_sender, &player_ids) {
-            return Err(self);
-        }
+        // If some of the already-joined players disconnected (fatally) without leaving the game,
+        // then this game state will be doomed.
+        // TODO:3 Check for disconnects before starting.
 
-        // Notice: `self` will drop causing all streams to close.
-        Ok(player_ids)
+        Ok(self.players.player_ids())
     }
 
-    fn is_party_leader(
-        &self,
-        player_id: &String,
-    ) -> bool {
+    fn is_party_leader(&self, player_id: &String) -> bool {
         match self.players.party_leader() {
             None => false,
             Some(party_leader_id) => party_leader_id == player_id,
         }
     }
 
-    fn notify_all_players(
-        &mut self,
-        response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>,
-        player_ids: &Vec<String>
-    ) -> Result<(), ()> {
-        let reply = ProtoStartGameReply {
-            player_ids: player_ids.clone()
-        };
-        if let Err(_) = response_sender.send(Ok(reply)) {
-            println!("ERROR: Failed to send reply to oneshot channel. Receiver dropped.");
-            return Err(());
-        } else {
-            println!("DEBUG: Sent req-reply callback for StartGame API.");
-        }
-
-        for player_id in player_ids.iter() {
+    /// Notify all players' streams that game is starting.
+    ///
+    /// Consumes `self` since this is intended to be the terminal action of a pre-game.
+    pub fn start_game_notify_players(mut self) {
+        for player_id in self.players.player_ids() {
             println!("DEBUG: Sending GameStart stream message to '{}'", player_id);
-            self.players.send_pre_game_message(player_id, ProtoGameStartMsg {})
+            self.players.send_pre_game_message(&player_id, ProtoGameStartMsg {})
         }
 
-        println!("DEBUG: Done notifying all players of game start.");
+        // Notice: `self` will drop causing all streams to close.
+    }
 
-        Ok(())
+    /// Notify all players' streams that "pre-game" is being deleted.
+    ///
+    /// Consumes `self` since this is intended to be the terminal action of a pre-game.
+    pub fn drop_game_notify_players(mut self, status: Status) {
+        for player_id in self.players.player_ids() {
+            self.players.send_pre_game_message_err(&player_id, status.clone());
+        }
+
+        // Notice: `self` will drop causing all streams to close.
     }
 }

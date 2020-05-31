@@ -12,7 +12,7 @@ pub trait GameRepository {
 
     // Pre-game APIs
 
-    fn create_game(&mut self, game: GameIdentifier);
+    fn create_pregame(&mut self, game: GameIdentifier);
     fn register_pregame_stream(&mut self, player_id: String, game: GameIdentifier, stream_out: StreamSender<ProtoPreGameMessage>);
     fn start_game(&mut self, player_id: String, game: GameIdentifier, response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>);
 
@@ -40,7 +40,7 @@ pub trait GameRepositoryClient {
 
     // Pre-game APIs
 
-    fn create_game(&self, game: GameIdentifier);
+    fn create_pregame(&self, game: GameIdentifier);
     fn register_pregame_stream(&self, player_id: String, game: GameIdentifier, stream_out: StreamSender<ProtoPreGameMessage>);
     fn start_game(&self, player_id: String, game: GameIdentifier, response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>);
 

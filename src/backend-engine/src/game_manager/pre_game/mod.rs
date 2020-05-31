@@ -38,6 +38,7 @@ fn player_count_min_max(game_type: &GameType) -> (usize, usize) {
 mod streaming {
     use backend_framework::streaming::StreamSender;
     use backend_framework::wire_api::proto_frj_ngn::ProtoPreGameMessage;
+    use tonic::Status;
 
     pub(crate) struct PlayerPreGameStreams {
         inner: Vec<PlayerData>,
@@ -103,6 +104,14 @@ mod streaming {
             message: impl Into<ProtoPreGameMessage>
         ) {
             self.out_stream(player_id, |out| out.send_message(message.into()))
+        }
+
+        pub fn send_pre_game_message_err(
+            &mut self,
+            player_id: &String,
+            status: Status
+        ) {
+            self.out_stream(player_id, |out| out.send_error_message(status))
         }
 
         fn out_stream<F>(

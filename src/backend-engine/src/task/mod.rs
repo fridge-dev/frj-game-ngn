@@ -24,7 +24,7 @@ pub fn start_repository_instance() -> Box<dyn GameRepositoryClient + Send + Sync
 #[derive(Debug)]
 enum GameRepoTaskEvent {
     // Pre-game APIs
-    CreateGame(GameIdentifier),
+    CreatePregame(GameIdentifier),
     RegisterPregameStream {
         player_id: String,
         game: GameIdentifier,
@@ -71,8 +71,8 @@ impl GameRepositoryClient for GameRepoTaskClientAdapter {
         Box::new(self.clone())
     }
 
-    fn create_game(&self, game: GameIdentifier) {
-        self.send(GameRepoTaskEvent::CreateGame(game))
+    fn create_pregame(&self, game: GameIdentifier) {
+        self.send(GameRepoTaskEvent::CreatePregame(game))
     }
 
     fn register_pregame_stream(&self, player_id: String, game: GameIdentifier, stream_out: StreamSender<ProtoPreGameMessage>) {
@@ -133,8 +133,8 @@ impl GameRepoTask<DefaultGameRepository> {
 
     fn route_event(&mut self, event: GameRepoTaskEvent) {
         match event {
-            GameRepoTaskEvent::CreateGame(game) => {
-                self.game_repo.create_game(game)
+            GameRepoTaskEvent::CreatePregame(game) => {
+                self.game_repo.create_pregame(game)
             },
             GameRepoTaskEvent::RegisterPregameStream { player_id, game, stream_out } => {
                 self.game_repo.register_pregame_stream(player_id, game, stream_out)

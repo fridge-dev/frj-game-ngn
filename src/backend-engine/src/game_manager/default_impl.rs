@@ -4,14 +4,29 @@ use crate::game_manager::types::{GameIdentifier, GameType};
 use crate::lost_cities_placeholder::{LostCitiesInstanceManager, LostCitiesEvent};
 use backend_framework::game_instance_manager::GameInstanceManager;
 use backend_framework::streaming::StreamSender;
-use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoStartGameReply};
+use backend_framework::wire_api::proto_frj_ngn::{ProtoPreGameMessage, ProtoStartGameReply, ProtoGameType};
 use love_letter_backend::LoveLetterInstanceManager;
 use love_letter_backend::events::{LoveLetterEvent, LoveLetterEventType};
 use std::collections::HashMap;
 use tokio::sync::oneshot;
 use tonic::Status;
+use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::{ProtoJoinGameAck, ProtoGameStartMsg};
 
 /// Repository for holding instances of games.
+//
+/// TODO:2.5 the following refactor will help game_id collision logic:
+/// ```
+/// # use love_letter_backend::LoveLetterInstanceManager;
+/// # use std::collections::HashMap;
+/// enum GameInstanceManagerMode {
+///     PreGame(PreGameInstanceManager),
+///     LoveLetter(LoveLetterInstanceManager),
+///     // ...
+/// }
+/// struct DefaultGameRepository2 {
+///     games: HashMap<String, GameInstanceManagerMode>,
+/// }
+/// ```
 pub(crate) struct DefaultGameRepository {
     // TODO:2.5 implement garbage collection
     unstarted_games: HashMap<GameIdentifier, PreGameInstanceManager>,
@@ -29,16 +44,25 @@ impl DefaultGameRepository {
         }
     }
 
-    fn insert_new_game(&mut self, game: GameIdentifier, player_ids: Vec<String>) {
-        // TODO:2 check that game doesn't already exist
+    fn insert_new_game(&mut self, game: GameIdentifier, player_ids: Vec<String>) -> Result<(), Status> {
         match game.game_type {
             GameType::LoveLetter => {
+                if self.love_letter_instances.contains_key(&game.game_id) {
+                    println!("ERROR: Pre-game was created while game with same ID was in progress. This should've been prevented internally, but wasn't. Game: {:?}", game);
+                    return Err(Status::internal("Backend in illegal state, create a new game."));
+                }
                 self.love_letter_instances.insert(game.game_id, LoveLetterInstanceManager::create_new_game(player_ids));
             },
             GameType::LostCities => {
+                if self.lost_cities_instances.contains_key(&game.game_id) {
+                    println!("ERROR: Pre-game was created while game with same ID was in progress. This should've been prevented internally, but wasn't. Game: {:?}", game);
+                    return Err(Status::internal("Backend in illegal state, create a new game."));
+                }
                 self.lost_cities_instances.insert(game.game_id, LostCitiesInstanceManager::create_new_game(player_ids));
             },
         }
+
+        Ok(())
     }
 
     fn get_player_ids_if_game_exists(&self, game: &GameIdentifier) -> Option<&Vec<String>> {
@@ -59,12 +83,18 @@ impl DefaultGameRepository {
 
 impl GameRepository for DefaultGameRepository {
 
-    /// Idempotent-ly creates a new instance manager of a game.
-    fn create_game(&mut self, game: GameIdentifier) {
-        let game_type = game.game_type;
+    /// Idempotent-ly creates a new generic "pre-game" instance manager for this game.
+    fn create_pregame(&mut self, game: GameIdentifier) {
+        // Ensure in-progress game doesn't exist with same ID. Don't actually notify client of
+        // failure here, they'll get a failure below in `register_pregame_stream()`. See comments
+        // on struct level above.
+        if self.get_player_ids_if_game_exists(&game).is_some() {
+            println!("WARN: Attempted to create pre-game with colliding game_id as in-progress game.");
+            return;
+        }
+
         println!("INFO: Creating game {:?}", game);
-        // TODO:2 ensure in-progress game doesn't exist with same ID
-        //        or does this not matter?
+        let game_type = game.game_type;
         self.unstarted_games
             .entry(game)
             .or_insert_with(|| PreGameInstanceManager::new(game_type));
@@ -73,17 +103,37 @@ impl GameRepository for DefaultGameRepository {
     fn register_pregame_stream(
         &mut self,
         player_id: String,
-        game: GameIdentifier,
+        game_id: GameIdentifier,
         stream_out: StreamSender<ProtoPreGameMessage>
     ) {
-        match self.unstarted_games.get_mut(&game) {
+        // Happy path
+        if let Some(pre_game_instance_manager) = self.unstarted_games.get_mut(&game_id) {
+            println!("INFO: Player '{}' joining game '{}'", player_id, game_id.game_id);
+            pre_game_instance_manager.add_player(player_id, stream_out);
+            return;
+        }
+
+        // Un-started game not found, check if game in-progress exists. This is possible if a player
+        // disconnects while game is in "pre-game" phase, and game starts before player reconnects.
+        match self.get_player_ids_if_game_exists(&game_id).filter(|p| p.contains(&player_id)) {
             None => {
-                // TODO:2 check race condition if game started while player in match disconnected
-                // TODO:2 notify caller of NotFound
+                // Notify caller of NotFound.
+                let _ = stream_out.send_error_message(Status::not_found(format!(
+                    "{} Game ID '{}' does not exist.",
+                    game_id.game_type,
+                    game_id.game_id
+                )));
             },
-            Some(pre_game_instance_manager) => {
-                println!("INFO: Player '{}' joining game '{}'", player_id, game.game_id);
-                pre_game_instance_manager.add_player(player_id, stream_out);
+            Some(player_ids) => {
+                let mut player_ids = player_ids.clone();
+                let ack = ProtoJoinGameAck {
+                    game_type: ProtoGameType::from(game_id.game_type) as i32,
+                    host_player_id: player_ids.remove(0),
+                    other_player_ids: player_ids,
+                };
+                // Notify caller that game started.
+                let _ = stream_out.send_message(ack.into());
+                let _ = stream_out.send_message(ProtoGameStartMsg {}.into());
             },
         }
     }
@@ -94,6 +144,8 @@ impl GameRepository for DefaultGameRepository {
         game_id: GameIdentifier,
         response_sender: oneshot::Sender<Result<ProtoStartGameReply, Status>>
     ) {
+        let response_sender = StartGameReplySender(response_sender);
+
         // Pop the GIM out
         let pre_game_instance_manager = match self.unstarted_games.remove(&game_id) {
             Some(instance_manager) => instance_manager,
@@ -107,27 +159,44 @@ impl GameRepository for DefaultGameRepository {
                     })
                     // Notify game not found
                     .ok_or_else(|| Status::not_found(format!(
-                        "{} Game ID '{}' does not exist or is already in progress.",
+                        "{} Game ID '{}' does not exist.",
                         game_id.game_type,
                         game_id.game_id
                     )));
-                let _ = response_sender.send(msg);
+                response_sender.send(msg);
 
                 return;
             },
         };
 
-        // Attempt to start the game, put the GIM back in the map if failed.
-        let player_ids = match pre_game_instance_manager.try_start_game(player_id, response_sender) {
+        // Check pre-requisites
+        let player_ids = match pre_game_instance_manager.start_game_pre_check(&player_id) {
             Ok(player_ids) => player_ids,
-            Err(pre_game_instance_manager) => {
+            Err(msg) => {
+                response_sender.send(Err(msg));
                 self.unstarted_games.insert(game_id, pre_game_instance_manager);
                 return;
             },
         };
 
         // Create the specific type of game instance.
-        self.insert_new_game(game_id, player_ids);
+        match self.insert_new_game(game_id, player_ids.clone()) {
+            Ok(_) => {
+                // Notifying party leader of all player IDs when the game is going to start is redundant,
+                // because the first game data-stream will include relevant game state including player IDs.
+                // TODO:3 Remove unnecessary player_ids from ProtoStartGameReply.
+                //
+                // Also notice, if we fail to respond to sync request, we start the game anyway.
+                response_sender.send(Ok(ProtoStartGameReply { player_ids }));
+                println!("DEBUG: Sent req-reply callback for StartGame API.");
+                pre_game_instance_manager.start_game_notify_players();
+                println!("DEBUG: Done notifying all players of game start.");
+            },
+            Err(msg) => {
+                response_sender.send(Err(msg.clone()));
+                pre_game_instance_manager.drop_game_notify_players(msg);
+            },
+        }
     }
 
     fn notify_game_state(&mut self, _player_id: String, _game: GameIdentifier) {
@@ -150,5 +219,14 @@ impl GameRepository for DefaultGameRepository {
 
     fn handle_event_lost_cities(&mut self, _event: LostCitiesEvent) {
         unimplemented!("DefaultGameRepository::handle_event_lost_cities()")
+    }
+}
+
+struct StartGameReplySender(oneshot::Sender<Result<ProtoStartGameReply, Status>>);
+impl StartGameReplySender {
+    pub fn send(self, message: Result<ProtoStartGameReply, Status>) {
+        if let Err(_) = self.0.send(message) {
+            println!("INFO: Failed to respond to StartGame call.");
+        }
     }
 }
