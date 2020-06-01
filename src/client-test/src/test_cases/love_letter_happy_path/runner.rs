@@ -1,7 +1,7 @@
 use crate::test_cases::love_letter_happy_path::pre_game::run_lvle_pregame;
 use crate::test_cases::love_letter_happy_path::simple_ai::run_simple_game_ai;
 use std::error::Error;
-use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 
 pub struct Config {
     pub game_id: String,
@@ -18,28 +18,29 @@ pub async fn run(config: Config) -> Result<(), Box<dyn Error>> {
     ) = run_lvle_pregame(config).await;
 
     // -- game --
-    let (done_send, mut done_recv) = mpsc::channel(3);
-    let mut done_send1 = done_send.clone();
-    let mut done_send2 = done_send.clone();
-    let mut done_send3 = done_send.clone();
-    drop(done_send);
+    let (done_send1, done_recv1) = oneshot::channel();
+    let (done_send2, done_recv2) = oneshot::channel();
+    let (done_send3, done_recv3) = oneshot::channel();
 
     tokio::task::spawn(async move {
         run_simple_game_ai(stream1).await;
-        let _ = done_send1.send(()).await;
+        let _ = done_send1.send(());
     });
     tokio::task::spawn(async move {
         run_simple_game_ai(stream2).await;
-        let _ = done_send2.send(()).await;
+        let _ = done_send2.send(());
     });
     tokio::task::spawn(async move {
         run_simple_game_ai(stream3).await;
-        let _ = done_send3.send(()).await;
+        let _ = done_send3.send(());
     });
 
-    while let Some(()) = done_recv.recv().await {
-        // There's probably a better way to do this :P
-    }
+    let _ = done_recv1.await;
+    println!("==== DONE1");
+    let _ = done_recv2.await;
+    println!("==== DONE2");
+    let _ = done_recv3.await;
+    println!("==== DONE3");
 
     Ok(())
 }

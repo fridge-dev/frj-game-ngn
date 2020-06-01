@@ -35,27 +35,27 @@ pub async fn run_lvle_pregame(config: Config) -> (
     pre_game_stream::run(pre_game_config).await.expect("pre_game");
 
     // -- data stream connect --
-    let (snd1, rcv1) = client1.open_love_letter_stream().await.expect("p1 data_stream");
-    let (snd2, rcv2) = client2.open_love_letter_stream().await.expect("p2 data_stream");
-    let (snd3, rcv3) = client3.open_love_letter_stream().await.expect("p3 data_stream");
+    let bi_stream_1 = client1.open_love_letter_stream().await.expect("p1 data_stream");
+    let bi_stream_2 = client2.open_love_letter_stream().await.expect("p2 data_stream");
+    let bi_stream_3 = client3.open_love_letter_stream().await.expect("p3 data_stream");
 
     // -- handshakes --
-    snd1.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
+    bi_stream_1.sender.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
         player_id: p1.clone(),
         game_id: game_id.clone(),
     }));
-    snd2.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
+    bi_stream_2.sender.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
         player_id: p2.clone(),
         game_id: game_id.clone(),
     }));
-    snd3.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
+    bi_stream_3.sender.send_lvle(ProtoLvLeIn::Handshake(ProtoGameDataHandshake {
         player_id: p3.clone(),
         game_id: game_id.clone(),
     }));
 
     return (
-        (snd1, rcv1),
-        (snd2, rcv2),
-        (snd3, rcv3)
+        bi_stream_1,
+        bi_stream_2,
+        bi_stream_3,
     );
 }

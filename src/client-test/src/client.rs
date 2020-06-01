@@ -128,9 +128,16 @@ impl LoggingStreamSender<ProtoLoveLetterDataIn> {
     }
 }
 
-// ------- LoggingGameClient --------
+// ------- LoggingBiStream --------
 
-pub type LoggingBiStream<I, O> = (LoggingStreamSender<I>, LoggingStreamRecv<O>);
+#[derive(Debug)]
+pub struct LoggingBiStream<I: prost::Message, O: prost::Message> {
+    pub sender: LoggingStreamSender<I>,
+    pub receiver: LoggingStreamRecv<O>,
+    pub my_player_id: String,
+}
+
+// ------- LoggingGameClient --------
 
 #[derive(Clone)]
 pub struct LoggingGameClient {
@@ -195,10 +202,11 @@ impl LoggingGameClient {
         tx: mpsc::UnboundedSender<I>,
         tonic_stream: Streaming<O>
     ) -> LoggingBiStream<I, O> {
-        (
-            self.make_stream_sender(tx),
-            self.make_stream_recv(tonic_stream)
-        )
+        LoggingBiStream {
+            sender: self.make_stream_sender(tx),
+            receiver: self.make_stream_recv(tonic_stream),
+            my_player_id: self.player_id.clone(),
+        }
     }
 
     fn make_stream_sender<T: prost::Message>(&self, tx: mpsc::UnboundedSender<T>) -> LoggingStreamSender<T> {
