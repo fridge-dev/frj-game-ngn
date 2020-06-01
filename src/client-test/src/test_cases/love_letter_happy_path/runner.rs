@@ -2,6 +2,7 @@ use crate::test_cases::love_letter_happy_path::pre_game::run_lvle_pregame;
 use crate::test_cases::love_letter_happy_path::simple_ai::run_simple_game_ai;
 use std::error::Error;
 use tokio::sync::oneshot;
+use std::time::Instant;
 
 pub struct Config {
     pub game_id: String,
@@ -22,6 +23,8 @@ pub async fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let (done_send2, done_recv2) = oneshot::channel();
     let (done_send3, done_recv3) = oneshot::channel();
 
+    let before = Instant::now();
+
     tokio::task::spawn(async move {
         run_simple_game_ai(stream1).await;
         let _ = done_send1.send(());
@@ -41,6 +44,9 @@ pub async fn run(config: Config) -> Result<(), Box<dyn Error>> {
     println!("==== DONE2");
     let _ = done_recv3.await;
     println!("==== DONE3");
+
+    let after = Instant::now();
+    println!("Completed in {}ms", after.duration_since(before).as_millis());
 
     Ok(())
 }

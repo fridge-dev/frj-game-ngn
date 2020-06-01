@@ -50,8 +50,11 @@ impl LoveLetterStateMachine {
         match staged_play.played_card {
             Card::Guard | Card::Priest | Card::Baron | Card::King => {
                 if client_player_id == &target_player_id {
-                    self.streams.send_err(&client_player_id, Status::failed_precondition("Cannot select self"));
-                    return LoveLetterState::PlayStaging(round_data, staged_play);
+                    if there_exists_a_non_self_targetable_player(&round_data, client_player_id) {
+                        self.streams.send_err(&client_player_id, Status::failed_precondition("Cannot select self"));
+                        return LoveLetterState::PlayStaging(round_data, staged_play);
+                    }
+                    // else, valid
                 }
             },
             Card::Prince => { /* No card-specific validation */ },
@@ -77,4 +80,14 @@ impl LoveLetterStateMachine {
 
         to_state
     }
+}
+
+fn there_exists_a_non_self_targetable_player(round_data: &RoundData, client_player_id: &String) -> bool {
+    for p in round_data.players.remaining_player_ids() {
+        if p != client_player_id && !round_data.handmaid_immunity_player_ids.contains(p) {
+            return true;
+        }
+    };
+
+    false
 }

@@ -19,14 +19,12 @@ pub async fn run_simple_game_ai(bi_stream: LoggingBiStream<ProtoLoveLetterDataIn
     let mut game_state_receiver = GameStateReceiver(bi_stream.receiver);
     let my_player_id = bi_stream.my_player_id;
 
-    let mut num_rounds_to_play = 5u8;
+    let mut num_rounds_to_play = 10u8;
     let mut is_round_intermission = false;
     let mut skip_my_turn_actions = false;
 
     loop {
         let payload = game_state_receiver.recv().await;
-
-        println!("-- ({}) Payload: {:?}", &my_player_id, payload.stage);
 
         match payload.stage.unwrap() {
             Stage::RoundInProgress(round_state) => {
@@ -72,7 +70,6 @@ pub async fn run_simple_game_ai(bi_stream: LoggingBiStream<ProtoLoveLetterDataIn
                         sender.send_lvle(ProtoLvLeIn::ReadyUp(ProtoGameDataReadyUpClick {}));
                     }
                 }
-                println!("-- ({}) Waiting for '{:?}' to ready up.", &my_player_id, round_result.unready_player_ids);
             },
         }
     }
@@ -99,9 +96,8 @@ fn take_my_turn(
         card_source = ProtoLvLeCardSource::Hand;
     }
 
-    // I'm pretty sure this will break at some point, like in 1v1 situation and someone
-    // plays handmaid. What happens in that situation?? Idk, but I don't ever intend to
-    // fully implement a UI for this game, so probably won't ever have to fix this.
+    // For example, in a 1v1 situation, if someone plays handmaid, then we allow targeting self,
+    // which results in a no-op (expect for Prince).
     remaining_non_handmaid_player_ids.retain(|x| x != my_player_id);
     let target_player_id = if !remaining_non_handmaid_player_ids.is_empty() {
         remaining_non_handmaid_player_ids.remove(0)
