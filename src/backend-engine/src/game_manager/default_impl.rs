@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use tokio::sync::oneshot;
 use tonic::Status;
 use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::{ProtoJoinGameAck, ProtoGameStartMsg};
+use std::time::{Duration, Instant};
 
 /// Repository for holding instances of games.
 //
@@ -83,8 +84,31 @@ impl DefaultGameRepository {
 impl GameRepository for DefaultGameRepository {
     /// Garbage collection
     fn cleanup_stale_games(&mut self) {
-        // TODO:2 implement garbage collection
-        println!("GC HERE");
+        println!(
+            "Cleaning up stale games. Games to scan: Unstarted={}, LoveLetter={}, LostCities={}.",
+            self.unstarted_games.len(),
+            self.love_letter_instances.len(),
+            self.lost_cities_instances.len()
+        );
+
+        let before = Instant::now();
+
+        // TODO:2.5 implement garbage collection with a shorter STW duration. This is `O(n)`
+        // where `n` can be in the tens or hundreds of thousands. Will my games ever be that
+        // successful? Probably not.
+        let expiry_duration = Duration::from_secs(60 * 10);
+        self.unstarted_games.retain(|_, g| !g.activity_tracker.is_expired(expiry_duration));
+        self.love_letter_instances.retain(|_, g| !g.is_game_stale(expiry_duration));
+        self.lost_cities_instances.retain(|_, g| !g.is_game_stale(expiry_duration));
+
+        let latency = Instant::now().saturating_duration_since(before);
+        println!(
+            "GC done after {}ms. Game count after clean up: Unstarted={}, LoveLetter={}, LostCities={}.",
+            latency.as_millis(),
+            self.unstarted_games.len(),
+            self.love_letter_instances.len(),
+            self.lost_cities_instances.len()
+        );
     }
 
     /// Idempotent-ly creates a new generic "pre-game" instance manager for this game.

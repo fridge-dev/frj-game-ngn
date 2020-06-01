@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 /// The generic trait which acts as a manager for a single instance of the game.
 /// A game instance comes into play only *after* the pre-game phase, and games
 /// are assumed, once created and started, to have an immutable set of players.
@@ -12,4 +14,7 @@ pub trait GameInstanceManager<T> {
 
     /// Accessor to get a reference to the players in the game.
     fn player_ids(&self) -> &Vec<String>;
+
+    /// Check if we can delete game
+    fn is_game_stale(&self, expiry_duration: Duration) -> bool;
 }

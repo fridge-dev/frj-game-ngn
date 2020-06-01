@@ -1,4 +1,5 @@
 use backend_framework::game_instance_manager::GameInstanceManager;
+use std::time::Duration;
 
 /// I want a place-holder of a 2nd game type, to show how multiple games will be hosted.
 #[derive(Debug)]
@@ -17,5 +18,9 @@ impl GameInstanceManager<LostCitiesEvent> for LostCitiesInstanceManager {
 
     fn player_ids(&self) -> &Vec<String> {
         unimplemented!()
+    }
+
+    fn is_game_stale(&self, _: Duration) -> bool {
+        true
     }
 }

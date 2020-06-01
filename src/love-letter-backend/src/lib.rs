@@ -11,8 +11,10 @@ mod types_test;
 use crate::events::{LoveLetterEvent, LoveLetterEventType};
 use crate::state_machine::{LoveLetterState, LoveLetterStateMachine};
 use crate::types::RoundData;
+use backend_framework::activity_timer::ActivityTracker;
 use backend_framework::holder::Holder;
 use backend_framework::game_instance_manager::GameInstanceManager;
+use std::time::Duration;
 
 /// This is the top level class for managing a single game of LoveLetter.
 ///
@@ -23,6 +25,7 @@ use backend_framework::game_instance_manager::GameInstanceManager;
 pub struct LoveLetterInstanceManager {
     state: Holder<LoveLetterState>,
     state_machine: LoveLetterStateMachine,
+    activity_tracker: ActivityTracker,
 }
 
 impl LoveLetterInstanceManager {
@@ -31,6 +34,7 @@ impl LoveLetterInstanceManager {
         LoveLetterInstanceManager {
             state: Holder::new(LoveLetterState::PlayPending(RoundData::new(&player_ids))),
             state_machine: LoveLetterStateMachine::new(player_ids),
+            activity_tracker: ActivityTracker::new(),
         }
     }
 
@@ -91,9 +95,15 @@ impl GameInstanceManager<LoveLetterEvent> for LoveLetterInstanceManager {
         let from_state = self.state.take();
         let to_state = self.route_event_to_state_machine(from_state, event);
         self.state.put(to_state);
+
+        self.activity_tracker.ping();
     }
 
     fn player_ids(&self) -> &Vec<String> {
         self.state_machine.all_player_ids()
+    }
+
+    fn is_game_stale(&self, expiry_duration: Duration) -> bool {
+        self.activity_tracker.is_expired(expiry_duration)
     }
 }

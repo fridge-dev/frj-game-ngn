@@ -1,3 +1,4 @@
+pub mod activity_timer;
 pub mod common_types;
 pub mod data_stream;
 pub mod game_instance_manager;

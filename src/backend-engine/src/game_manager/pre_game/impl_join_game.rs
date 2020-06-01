@@ -27,6 +27,7 @@ impl PreGameInstanceManager {
 
         self.add_player_and_send_ack(player_id.clone(), client_stream);
         self.notify_other_players(player_id);
+        self.activity_tracker.ping();
     }
 
     fn add_player_and_send_ack(&mut self, player_id: String, client_stream: StreamSender<ProtoPreGameMessage>) {

@@ -1,4 +1,5 @@
 use crate::game_manager::types::GameType;
+use backend_framework::activity_timer::ActivityTracker;
 
 mod impl_join_game;
 mod impl_start_game;
@@ -10,6 +11,8 @@ pub(crate) struct PreGameInstanceManager {
     min_players: usize,
     max_players: usize,
     players: streaming::PlayerPreGameStreams,
+    // TODO:2.5 implement some keep-alive ping for host.
+    pub activity_tracker: ActivityTracker,
 }
 
 impl PreGameInstanceManager {
@@ -22,6 +25,7 @@ impl PreGameInstanceManager {
             min_players: min,
             max_players: max,
             players: streaming::PlayerPreGameStreams::new(),
+            activity_tracker: ActivityTracker::new(),
         }
     }
 }
