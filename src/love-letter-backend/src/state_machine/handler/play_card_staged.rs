@@ -49,10 +49,6 @@ impl LoveLetterStateMachine {
         // Append to play history
         round_data.play_history.push(played_card);
 
-        // Clear self from Handmaids (played from previous turn) AFTER we validate it's our
-        // turn and BEFORE we commit any self-effects (Handmaid only prevents others' effects).
-        round_data.handmaid_immunity_player_ids.remove(client_player_id);
-
         // TODO:3 if selection not-needed, auto-commit.
         // Alternatively, client can be written to immediately send commit for certain cards.
         // This would keep the backend less modal.

@@ -77,6 +77,9 @@ message ProtoLvLeGameState {
         ProtoLvLeCardSelection staged_play = 6;
         ProtoLvLeCommittedPlay most_recent_committed_play = 7;
         repeated ProtoLvLeCard play_history = 8;
+        // TODO:3 `turn` should really include a distinction between pending-play and pending-commit. Until then, the
+        // API model must closely resemble the backend state (yuck!).
+        repeated string handmaid_player_ids = 9;
     }
 
     message ProtoLvLeTurnIntermissionState {

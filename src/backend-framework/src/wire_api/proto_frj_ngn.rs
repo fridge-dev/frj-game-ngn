@@ -79,6 +79,7 @@ pub mod proto_love_letter_data_out {
     pub enum ProtoLvLeOut {
         #[prost(message, tag = "2")]
         GameState(super::ProtoLvLeGameState),
+        /// TODO:2.5 remove other possible game states
         #[prost(message, tag = "3")]
         TurnIndicator(super::ProtoLvLeTurnIndicatorRepl),
         #[prost(message, tag = "4")]
@@ -101,6 +102,7 @@ pub mod proto_love_letter_data_out {
 
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProtoLvLeGameState {
+    /// TODO:2.5 remove redundant field
     #[prost(uint64, tag = "1")]
     pub clock: u64,
     #[prost(message, repeated, tag = "2")]
@@ -130,6 +132,10 @@ pub mod proto_lv_le_game_state {
         pub most_recent_committed_play: ::std::option::Option<super::ProtoLvLeCommittedPlay>,
         #[prost(enumeration = "super::ProtoLvLeCard", repeated, tag = "8")]
         pub play_history: ::std::vec::Vec<i32>,
+        /// TODO:3 `turn` should really include a distinction between pending-play and pending-commit. Until then, the
+        /// API model must closely resemble the backend state (yuck!).
+        #[prost(string, repeated, tag = "9")]
+        pub handmaid_player_ids: ::std::vec::Vec<std::string::String>,
         #[prost(oneof = "proto_lv_le_round_state::Turn", tags = "3, 4, 5")]
         pub turn: ::std::option::Option<proto_lv_le_round_state::Turn>,
     }

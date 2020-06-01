@@ -167,8 +167,10 @@ impl LoveLetterStateMachine {
                 round_data.play_history.push(discarded);
             },
         }
-
         round_data.most_recent_play_details.replace(committed_play);
+
+        // Clear next turn player from Handmaids (played from previous turn).
+        round_data.handmaid_immunity_player_ids.remove(round_data.players.current_turn_player_id());
 
         // State transition
         let to_state = if round_data.players.remaining_player_ids().len() < 2 {

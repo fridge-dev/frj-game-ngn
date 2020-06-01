@@ -101,6 +101,11 @@ fn into_proto_round_state(
         .map(|card| ProtoLvLeCard::from(*card) as i32)
         .collect();
 
+    let mut handmaid_player_ids = Vec::with_capacity(round_data.handmaid_immunity_player_ids.len());
+    for player_id in round_data.handmaid_immunity_player_ids.clone() {
+        handmaid_player_ids.push(player_id);
+    }
+
     let is_my_turn = my_player_id == round_data.players.current_turn_player_id();
     let turn: Option<proto_lv_le_round_state::Turn> = match (opt_unready_players, is_my_turn) {
         (Some(unready_players), _) => {
@@ -127,6 +132,7 @@ fn into_proto_round_state(
         staged_play,
         most_recent_committed_play,
         play_history,
+        handmaid_player_ids,
         turn,
     }
 }
