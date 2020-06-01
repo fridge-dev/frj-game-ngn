@@ -1,4 +1,3 @@
-
 use crate::game_manager::api::{GameRepositoryClient, GameRepository};
 use crate::game_manager::default_impl::DefaultGameRepository;
 use crate::game_manager::types::GameIdentifier;
@@ -10,19 +9,26 @@ use love_letter_backend::events::LoveLetterEvent;
 use tonic::Status;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+use std::time::Duration;
+use rand::Rng;
 
+// TODO:1 consistent hashing onto parallel backend slots
 pub fn start_repository_instance() -> Box<dyn GameRepositoryClient + Send + Sync> {
     let (tx, rx) = mpsc::unbounded_channel();
     let task = GameRepoTask::new(rx);
 
     tokio::spawn(task.event_loop());
 
-    Box::new(GameRepoTaskClientAdapter::new(tx))
+    let task_client = GameRepoTaskClientAdapter::new(tx);
+    tokio::task::spawn(garbage_collection_heartbeat(task_client.clone()));
+    Box::new(task_client)
 }
 
 /// A 1:1 enumeration of GameRepository API methods.
 #[derive(Debug)]
 enum GameRepoTaskEvent {
+    // Non-game APIs
+    CleanupStaleGames,
     // Pre-game APIs
     CreatePregame(GameIdentifier),
     RegisterPregameStream {
@@ -62,6 +68,10 @@ impl GameRepoTaskClientAdapter {
         self.sender
             .send(event)
             .expect("Game task stopped - this should never happen");
+    }
+
+    pub fn cleanup_stale_games(&self) {
+        self.send(GameRepoTaskEvent::CleanupStaleGames)
     }
 }
 
@@ -133,6 +143,9 @@ impl GameRepoTask<DefaultGameRepository> {
 
     fn route_event(&mut self, event: GameRepoTaskEvent) {
         match event {
+            GameRepoTaskEvent::CleanupStaleGames => {
+                self.game_repo.cleanup_stale_games()
+            },
             GameRepoTaskEvent::CreatePregame(game) => {
                 self.game_repo.create_pregame(game)
             },
@@ -152,5 +165,21 @@ impl GameRepoTask<DefaultGameRepository> {
                 self.game_repo.handle_event_lost_cities(inner)
             },
         }
+    }
+}
+
+/// Garbage collection heartbeat task that runs for entire app lifecycle.
+/// There is 1 GC heartbeat task for each repo task.
+async fn garbage_collection_heartbeat(task_client: GameRepoTaskClientAdapter) {
+    let interval_time_min_seconds = 60u64;
+    let interval_time_max_seconds = 180u64;
+
+    loop {
+        let jittered_interval_time_sec = rand::thread_rng().gen_range(
+            interval_time_min_seconds,
+            interval_time_max_seconds
+        );
+        tokio::time::delay_for(Duration::from_secs(jittered_interval_time_sec)).await;
+        task_client.cleanup_stale_games();
     }
 }

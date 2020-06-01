@@ -28,7 +28,6 @@ use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::{ProtoJo
 /// }
 /// ```
 pub(crate) struct DefaultGameRepository {
-    // TODO:2.5 implement garbage collection
     unstarted_games: HashMap<GameIdentifier, PreGameInstanceManager>,
     love_letter_instances: HashMap<String, LoveLetterInstanceManager>,
     lost_cities_instances: HashMap<String, LostCitiesInstanceManager>,
@@ -82,6 +81,11 @@ impl DefaultGameRepository {
 }
 
 impl GameRepository for DefaultGameRepository {
+    /// Garbage collection
+    fn cleanup_stale_games(&mut self) {
+        // TODO:2 implement garbage collection
+        println!("GC HERE");
+    }
 
     /// Idempotent-ly creates a new generic "pre-game" instance manager for this game.
     fn create_pregame(&mut self, game: GameIdentifier) {

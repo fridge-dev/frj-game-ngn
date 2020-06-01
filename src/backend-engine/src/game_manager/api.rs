@@ -10,6 +10,10 @@ use tonic::Status;
 /// `&mut self` because we mutate data internally.
 pub trait GameRepository {
 
+    // General (non-game) APIs
+
+    fn cleanup_stale_games(&mut self); // Backend only (doesn't exist in RepoClient below)
+
     // Pre-game APIs
 
     fn create_pregame(&mut self, game: GameIdentifier);
