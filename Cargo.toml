@@ -7,4 +7,5 @@ members = [
   "src/client-test",
   "src/common-build",
   "src/love-letter-backend",
+  "src/mastermind-backend",
 ]
