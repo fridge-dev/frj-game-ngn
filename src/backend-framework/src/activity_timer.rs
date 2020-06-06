@@ -16,9 +16,12 @@ impl ActivityTracker {
         self.time_of_last_activity = Instant::now();
     }
 
-    pub fn is_expired(&self, expiration_duration: Duration) -> bool {
-        expiration_duration <= Instant::now()
-            .saturating_duration_since(self.time_of_last_activity)
+    pub fn has_inactivity_elapsed(&self, expiration_duration: Duration) -> bool {
+        expiration_duration <= self.duration_since_last_activity()
+    }
+
+    fn duration_since_last_activity(&self) -> Duration {
+        Instant::now().saturating_duration_since(self.time_of_last_activity)
     }
 }
 
@@ -31,11 +34,11 @@ mod tests {
     #[test]
     fn test() {
         let mut t = ActivityTracker::new();
-        assert!(!t.is_expired(Duration::from_millis(50)));
+        assert!(!t.has_inactivity_elapsed(Duration::from_millis(50)));
         thread::sleep(Duration::from_millis(50));
-        assert!(t.is_expired(Duration::from_millis(50)));
+        assert!(t.has_inactivity_elapsed(Duration::from_millis(50)));
 
         t.ping();
-        assert!(!t.is_expired(Duration::from_millis(50)));
+        assert!(!t.has_inactivity_elapsed(Duration::from_millis(50)));
     }
 }

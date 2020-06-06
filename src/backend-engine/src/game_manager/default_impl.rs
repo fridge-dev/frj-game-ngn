@@ -97,7 +97,7 @@ impl GameRepository for DefaultGameRepository {
         // where `n` can be in the tens or hundreds of thousands. Will my games ever be that
         // successful? Probably not.
         let expiry_duration = Duration::from_secs(60 * 10);
-        self.unstarted_games.retain(|_, g| !g.activity_tracker.is_expired(expiry_duration));
+        self.unstarted_games.retain(|_, g| !g.activity_tracker.has_inactivity_elapsed(expiry_duration));
         self.love_letter_instances.retain(|_, g| !g.is_game_stale(expiry_duration));
         self.lost_cities_instances.retain(|_, g| !g.is_game_stale(expiry_duration));
 

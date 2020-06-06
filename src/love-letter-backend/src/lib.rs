@@ -104,6 +104,6 @@ impl GameInstanceManager<LoveLetterEvent> for LoveLetterInstanceManager {
     }
 
     fn is_game_stale(&self, expiry_duration: Duration) -> bool {
-        self.activity_tracker.is_expired(expiry_duration)
+        self.activity_tracker.has_inactivity_elapsed(expiry_duration)
     }
 }
