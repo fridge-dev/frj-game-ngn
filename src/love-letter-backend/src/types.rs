@@ -22,6 +22,8 @@ pub struct RoundData {
 /// This is not efficient, but I've wasted too much time trying to get a nice interface
 /// while eliminating invalid state space. My top priority is (1) to contain all of the
 /// possible invalid states to this struct, and (2) to continue on with development.
+///
+/// TODO:1.5 Use a linked hash map or just a Vec<(String, Card)>.
 pub struct Players {
     cards: HashMap<String, Card>,
     // This will be in the same cyclical order as GameData's order, but

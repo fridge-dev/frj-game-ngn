@@ -33,36 +33,36 @@ mod cli {
     }
 
     impl CliArgs {
-    pub fn parse() -> Self {
-        let mut cli_args = env::args();
+        pub fn parse() -> Self {
+            let mut cli_args = env::args();
 
-        // Arg 0
-        let program_name = cli_args.next().unwrap_or_else(|| {
-            eprintln!("Program name is somehow missing? You should never see this.");
-            process::exit(1);
-        });
-
-        // Arg 1
-        let port = cli_args.next()
-            .map(|port_str| port_str.parse().unwrap_or_else(|_| {
-                CliArgs::print_usage_exit(&program_name);
-            }))
-            .unwrap_or_else(|| {
-                println!("Using default port '{}'", DEFAULT_PORT);
-                DEFAULT_PORT
+            // Arg 0
+            let program_name = cli_args.next().unwrap_or_else(|| {
+                eprintln!("Program name is somehow missing? You should never see this.");
+                process::exit(1);
             });
 
-        CliArgs {
-            port,
+            // Arg 1
+            let port = cli_args.next()
+                .map(|port_str| port_str.parse().unwrap_or_else(|_| {
+                    CliArgs::print_usage_exit(&program_name);
+                }))
+                .unwrap_or_else(|| {
+                    println!("Using default port '{}'", DEFAULT_PORT);
+                    DEFAULT_PORT
+                });
+
+            CliArgs {
+                port,
+            }
+        }
+
+        fn print_usage_exit(program_name: &str) -> ! {
+            eprintln!();
+            eprintln!("Usage:  \t{} <server port>", program_name);
+            eprintln!("Example:\t{} 3000", program_name);
+            eprintln!();
+            process::exit(1);
         }
     }
-
-    fn print_usage_exit(program_name: &str) -> ! {
-        eprintln!();
-        eprintln!("Usage:  \t{} <server port>", program_name);
-        eprintln!("Example:\t{} 3000", program_name);
-        eprintln!();
-        process::exit(1);
-    }
-}
 }

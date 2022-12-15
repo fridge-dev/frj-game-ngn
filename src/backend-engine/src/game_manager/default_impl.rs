@@ -14,7 +14,7 @@ use backend_framework::wire_api::proto_frj_ngn::proto_pre_game_message::{ProtoJo
 use std::time::{Duration, Instant};
 
 /// Repository for holding instances of games.
-//
+///
 /// TODO:2.5 the following refactor will help game_id collision logic:
 /// ```
 /// # use love_letter_backend::LoveLetterInstanceManager;

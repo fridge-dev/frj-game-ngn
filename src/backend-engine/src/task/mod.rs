@@ -67,7 +67,7 @@ impl GameRepoTaskClientAdapter {
     fn send(&self, event: GameRepoTaskEvent) {
         self.sender
             .send(event)
-            .expect("Game task stopped - this should never happen");
+            .expect("GameRepo task stopped - this should never happen");
     }
 
     pub fn cleanup_stale_games(&self) {
@@ -124,14 +124,14 @@ struct GameRepoTask<T: GameRepository> {
 }
 
 impl GameRepoTask<DefaultGameRepository> {
-    fn new(receiver: mpsc::UnboundedReceiver<GameRepoTaskEvent>) -> Self {
+    pub fn new(receiver: mpsc::UnboundedReceiver<GameRepoTaskEvent>) -> Self {
         GameRepoTask {
             receiver,
             game_repo: DefaultGameRepository::new(),
         }
     }
 
-    async fn event_loop(mut self) {
+    pub async fn event_loop(mut self) {
         println!("INFO: Starting event loop.");
 
         while let Some(event) = self.receiver.recv().await {
